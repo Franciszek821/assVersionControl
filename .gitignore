@@ -1,1 +1,3 @@
-/.assvc
+assvcPackage/.assvc
+assvcPackage/__pycache__
+.gitignore
