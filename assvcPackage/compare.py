@@ -15,7 +15,7 @@ if assvc_path:
 
 def compare():
     if not assvc_path:
-        print("Error: .assvc directory not found.Chuj")
+        print("Error: .assvc directory not found.")
         return
     
     current_path = os.path.join(assvc_path, "head/current")
@@ -117,14 +117,12 @@ def check(path_check):
             compressed = f.read()
         old_content = zlib.decompress(compressed).decode("utf-8", errors="replace")
 
-        now_blob = "blob" + str(size) + "\n" + fileContent
+        now_blob = "blob" + str(size) + "\0" + fileContent
         shaNow = hashlib.sha1(now_blob.encode()).hexdigest()
 
         if shaNow != sha:
             print(f"{YELLOW}  MODIFIED:{RESET} {path}")
-            old_content_lines = "\n".join(old_content.split("\n")[1:])
-            now_blob_lines = "\n".join(now_blob.split("\n")[1:])
-            show_diff(old_content_lines, now_blob_lines, path)
+            show_diff(old_content, now_blob, path)
 
 
     tracked_paths = [path for path, sha in path_check]
