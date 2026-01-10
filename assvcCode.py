@@ -1,0 +1,50 @@
+#!/usr/bin/env python3
+
+import argparse
+import os
+import hashlib
+import zlib
+import time
+from assvcPackage.commit import commit
+from assvcPackage._init import _init
+from assvcPackage.setup import setup
+from assvcPackage.compare import compare
+
+
+# CLI setup
+parser = argparse.ArgumentParser(prog="assvc")
+sub = parser.add_subparsers(dest="command")
+
+
+sub.add_parser("_init")
+
+
+commit_parser = sub.add_parser("commit")
+commit_parser.add_argument("-m", "--message", type=str, default="Initial commit",
+                           help="Commit message")
+
+sub.add_parser("setup")
+
+sub.add_parser("compare")
+
+
+args = parser.parse_args()
+
+
+if args.command == "_init":
+    _init()
+elif args.command == "commit":
+    commit(message=args.message)
+elif args.command == "setup":
+    setup()
+elif args.command == "compare":
+    compare()
+
+
+
+else:
+    parser.print_help()
+
+#pyinstaller --onefile --name assvc assvcCode
+
+#pyinstaller --onefile --name assvcInstall installer.py
