@@ -5,12 +5,13 @@ import time
 import difflib
 
 from assvcPackage.commit import find_assvc
-from assvcPackage.commit import ignore_dirs
+from assvcPackage.commit import get_ignore
 
 
 assvc_path = find_assvc()
 if assvc_path:
     parent_path = os.path.dirname(assvc_path)
+    ignore_dirs, ignore_files = get_ignore(parent_path)
 
 
 def compare():
@@ -38,45 +39,33 @@ def compare():
 
     stack = extractDataTree(tree_data.decode())
     path_check = []
+
     while stack:
-
         entry_type, name, sha = stack.pop()
-
         object_data = extractData(sha)
+
         if isinstance(object_data, str):
             object_data = object_data.encode()
- 
-        if entry_type == "16384":
 
+        if entry_type == "16384":
             if name:
                 dir_path = os.path.join(parent_path, name)
                 path_check.append((dir_path, sha))
 
-
             children = extractDataTree(object_data.decode())
-
             for (child_type, child_name, child_sha) in reversed(children):
                 full_name = os.path.join(name, child_name) if name else child_name
                 path = os.path.join(parent_path, full_name)
                 if child_type == "16384":
-
                     stack.append((child_type, full_name, child_sha))
                 else:
-
                     path_check.append((path, child_sha))
- 
         else:
             path = os.path.join(parent_path, name)
-            #print(f"FILE: {path}")
             path_check.append((path, sha))
         
     check(path_check)
-        
 
-
-
-
-        
 
 # colors
 RED    = "\033[91m"
@@ -89,18 +78,19 @@ RESET  = "\033[0m"
 def check(path_check):
     print()
 
-
     dirsFilesAll = []
     for root, dirs, files in os.walk(parent_path):
         dirs[:] = [d for d in dirs if d not in ignore_dirs]
         for d in dirs:
+            if d in ignore_dirs:
+                continue
             dirsFilesAll.append(os.path.join(root, d))
         for f in files:
+            if f in ignore_files:
+                continue
             dirsFilesAll.append(os.path.join(root, f))
 
-
     for (path, sha) in path_check:
-
         if not os.path.exists(path):
             print(f"{RED}  MISSING:{RESET} {path}")
             continue
@@ -115,25 +105,25 @@ def check(path_check):
         shapath = os.path.join(assvc_path, "objects", sha[:2], sha)
         with open(shapath, "rb") as f:
             compressed = f.read()
-        old_content = zlib.decompress(compressed).decode("utf-8", errors="replace")
 
-        now_blob = "blob" + str(size) + "\0" + fileContent
-        shaNow = hashlib.sha1(now_blob.encode()).hexdigest()
+        old_blob_full = zlib.decompress(compressed).decode("utf-8", errors="replace")
+        old_content = old_blob_full.split("\n", 1)[1]
+
+
+        now_blob_full = f"blob {size}\n{fileContent}"
+        shaNow = hashlib.sha1(now_blob_full.encode()).hexdigest()
+
+
+        now_blob = fileContent
 
         if shaNow != sha:
             print(f"{YELLOW}  MODIFIED:{RESET} {path}")
             show_diff(old_content, now_blob, path)
 
-
     tracked_paths = [path for path, sha in path_check]
     for item in dirsFilesAll:
         if item not in tracked_paths:
             print(f"{GREEN}  NEW:{RESET} {item}")
-    
-
-
-
-
 
 
 def extractDataCommit(commit_content):
@@ -145,8 +135,8 @@ def extractDataCommit(commit_content):
     timestamp = commiter_parts[2]
 
     message = "\n".join(lines[3:])
-
     return treeSHA, commiter, timestamp, message
+
 
 def extractDataTree(tree_content):
     lines = tree_content.strip().splitlines()
@@ -154,7 +144,6 @@ def extractDataTree(tree_content):
     for line in lines:
         parts = line.split(" ", 2)
         if len(parts) < 3:
-
             continue
         entry_type, name, sha = parts
         entries.append((entry_type, name, sha))
@@ -167,10 +156,10 @@ def extractData(sha):
         compressed = f.read()
     decompressed = zlib.decompress(compressed)
     try:
-        text = decompressed.decode("utf-8")
+        return decompressed.decode("utf-8")
     except UnicodeDecodeError:
-        text = decompressed 
-    return text
+        return decompressed
+
 
 def is_text_file(filepath):
     try:
@@ -195,11 +184,6 @@ def show_diff(old_text, new_text, filename):
 
     for line in diff:
         if line.startswith("+") and not line.startswith("+++"):
-            print("\033[32m" + line + "\033[0m")  # green
+            print("\033[32m" + line + "\033[0m")
         elif line.startswith("-") and not line.startswith("---"):
-            print("\033[31m" + line + "\033[0m")  # red
-
-
-
-
-#compare()
+            print("\033[31m" + line + "\033[0m")

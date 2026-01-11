@@ -1,2 +1,4 @@
 /.assvc
 assvcPackage/__pycache__
+build
+assvcLinux.spec
