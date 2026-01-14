@@ -5,31 +5,36 @@ Version control made by me.
 
 Initialize repository:
 
-* `assvc start` — create a `.assvc` folder in the current directory
+* `assvc start` — Initialize a new `.assvc` folder in the current directory
 
 Create a commit:
 
-* `assvc commit -m "message"` — commit current changes
-* `assvc commit` — commit with default message
+* `assvc commit -m "message"` — Create a new commit with a message (default: "Commit without message")
+* `assvc commit` — Commit with default message
 
 Compare changes:
 
-* `assvc compare` — show differences between latest commit and working directory 
-* `assvc compare -s "sha"` — show differences between selected commit and working directory
-* `assvc compare -d` — show differences between selected commit and working directory with show diff output
+* `assvc compare` — Compare changes between latest commit and working directory
+* `assvc compare -s "sha"` — Compare changes between selected commit and working directory
+* `assvc compare -d` — Compare changes (with diff output) between selected commit and working directory
 
 View history:
 
-* `assvc history` — list previous commits
+* `assvc history` — Show commit history
 
 Install tool:
 
-* `assvc installer` — install or uninstall `assvc` to `~/.local/bin`
+* `assvc installer` — Install or uninstall `assvc` to/from `~/.local/bin`
 
 Reverse:
 
-* `assvc reverse` — reverse the working directory to latest commit
-* `assvc reverse -s "sha"` — reverse the working directory to selected commit
+* `assvc reverse` — Revert the working directory to latest commit
+* `assvc reverse -s "sha"` — Revert the working directory to selected commit
+
+Import / Export:
+
+* `assvc import <zip_path>` — Import repository data from a zip file
+* `assvc export` — Export repository data
 
 Ignore
 * `.assignore` — you can  add file called .assignore where you can add files and folder that you dont want to commit and/or compare and/or reversed
