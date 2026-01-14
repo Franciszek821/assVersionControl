@@ -117,7 +117,7 @@ def check(path_check):
     for (path, sha) in path_check:
         if not os.path.exists(path):
             restore_missing_file(path, sha)
-            print(f"{RED}  REVERSED DELETE:{RESET} {path}")
+            print(f"{GREEN}  REVERSED DELETE:{RESET} {path}")
             continue
 
         if not is_text_file(path):
@@ -149,7 +149,7 @@ def check(path_check):
     for item in dirsFilesAll:
         if item not in tracked_paths:
             reverseAdd(item)
-            print(f"{YELLOW}  REVERSED NEW:{RESET} {item}")
+            print(f"{RED}  REVERSED NEW:{RESET} {item}")
 
 def changeFileContent(path, commit_text):
     with open(path, "w", encoding="utf-8") as f:

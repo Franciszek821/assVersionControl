@@ -30,3 +30,6 @@ Reverse:
 
 * `assvc reverse` — reverse the working directory to latest commit
 * `assvc reverse -s "sha"` — reverse the working directory to selected commit
+
+Ignore
+* `.assignore` — you can  add file called .assignore where you can add files and folder that you dont want to commit and/or compare and/or reversed
