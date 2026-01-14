@@ -13,16 +13,19 @@ if assvc_path:
     parent_path = os.path.dirname(assvc_path)
     ignore_dirs, ignore_files = get_ignore(parent_path)
 
-
-def compare():
+global comparePrintGlobal
+def compare(commit_sha, show_diff_var, comparePrint):
+    global comparePrintGlobal
+    comparePrintGlobal = comparePrint
+    if commit_sha == "latest":
+        current_path = os.path.join(find_assvc(), "head/current")
+        with open(current_path, "r") as f:
+            commit_sha = f.read().strip()
+    
     if not assvc_path:
         print("Error: .assvc directory not found.")
         return
     
-    current_path = os.path.join(assvc_path, "head/current")
-    with open(current_path, "r") as f:
-        commit_sha = f.read().strip()
-
     commit_path = os.path.join(assvc_path, "objects", commit_sha[:2], commit_sha)
     with open(commit_path, "rb") as f:
         compressed_data = f.read()
@@ -30,8 +33,16 @@ def compare():
     commit_text = decompressed.decode("utf-8", errors="replace")
 
     treeSHA, commiter, timestamp, message = extractDataCommit(commit_text)
-    print(f"Latest commit: {commiter} {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(int(timestamp)))}")
-    print(f"Message: {message}")
+    if comparePrintGlobal:
+        print(f"Comparing with commit: {commiter} {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(int(timestamp)))}")
+        print(f"Message: {message}")
+    else:
+        print(f"Reversing with commit: {commiter} {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(int(timestamp)))}")
+        print(f"Message: {message}")
+        print("\n")
+        print("THE REVERT WILL")
+        
+
 
     root_tree_path = os.path.join(assvc_path, "objects", treeSHA[:2], treeSHA)
     with open(root_tree_path, "rb") as f:
@@ -64,7 +75,7 @@ def compare():
             path = os.path.join(parent_path, name)
             path_check.append((path, sha))
         
-    check(path_check)
+    check(path_check, show_diff_var)
 
 
 # colors
@@ -75,7 +86,9 @@ BLUE   = "\033[94m"
 RESET  = "\033[0m"
 
 
-def check(path_check):
+def check(path_check, show_diff_var):
+    global comparePrintGlobal
+    
     print()
 
     dirsFilesAll = []
@@ -92,7 +105,10 @@ def check(path_check):
 
     for (path, sha) in path_check:
         if not os.path.exists(path):
-            print(f"{RED}  MISSING:{RESET} {path}")
+            if comparePrintGlobal:
+                print(f"{RED}  MISSING:{RESET} {path}")
+            else:
+                print(f"{GREEN}  ADD:{RESET} {path}")
             continue
 
         if not is_text_file(path):
@@ -117,14 +133,20 @@ def check(path_check):
         now_blob = fileContent
 
         if shaNow != sha:
-            print(f"{YELLOW}  MODIFIED:{RESET} {path}")
-            show_diff(old_content, now_blob, path)
+            if comparePrintGlobal:
+                print(f"{YELLOW}  MODIFIED:{RESET} {path}")
+            else:
+                print(f"{YELLOW}  MODIFY:{RESET} {path}")
+            if show_diff_var:
+                show_diff(old_content, now_blob, path)
 
     tracked_paths = [path for path, sha in path_check]
     for item in dirsFilesAll:
         if item not in tracked_paths:
-            print(f"{GREEN}  NEW:{RESET} {item}")
-
+            if comparePrintGlobal:
+                print(f"{GREEN}  NEW:{RESET} {item}")
+            else:
+                print(f"{RED}  DELETE:{RESET} {item}")
 
 def extractDataCommit(commit_content):
     lines = commit_content.strip().splitlines()
