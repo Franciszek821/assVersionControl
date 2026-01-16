@@ -1,5 +1,8 @@
 # assvc
 Version control made by me.
+Linux version only for now.
+To install globally to work everywhere use command ./assvcLinux install.
+After installing globally use command "assvc -h".
 
 ## Commands
 
