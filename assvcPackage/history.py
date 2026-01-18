@@ -1,23 +1,19 @@
 import os
 import time
 import zlib
-from assvcPackage.commit import find_assvc
+from assvcPackage.commit import find_assvc, shorten_sha, get_history
 
 
-def printHistory():
+def printHistory(long):
     try:
         assvc_path = find_assvc()
         if not assvc_path:
             print("Error: .assvc directory not found.")
             return
         
-        history_path = os.path.join(assvc_path, "history", "history")
-        if not os.path.exists(history_path):
-            print("No history found.")
-            return
 
         try:
-            with open(history_path, "r") as f:
+            with open(get_history(assvc_path), "r") as f:
                 commits = f.readlines()
         except IOError:
             print("Error: Unable to read history file.")
@@ -31,7 +27,11 @@ def printHistory():
         for commit_sha in commits:
             try:
                 description = getTextDescription(commit_sha.strip(), assvc_path)
-                print(f"Commit: {commit_sha.strip()}")
+                short_sha = shorten_sha(commit_sha.strip(), get_history(assvc_path))
+                if long:
+                    print(f"Commit: {commit_sha.strip()}")
+                else:
+                    print(f"Commit: {short_sha}")
                 print(f"    Description: {description}")
             except Exception:
                 print(f"Commit: {commit_sha.strip()}")

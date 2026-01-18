@@ -5,8 +5,7 @@ import time
 import difflib
 import shutil
 
-from assvcPackage.commit import find_assvc
-from assvcPackage.commit import get_ignore
+from assvcPackage.commit import find_assvc, get_ignore, get_history, deShorten_sha
 from assvcPackage.compare import compare
 
 
@@ -17,7 +16,7 @@ global assvc_path
 global parent_path
 global ignore_dirs
 global ignore_files
-def reverse(commit_sha, isPrintArgument):
+def reverse(commit_sha, isPrintArgument, isForce):
     global assvc_path, parent_path, ignore_dirs, ignore_files
     try:
         assvc_path = find_assvc()
@@ -32,18 +31,20 @@ def reverse(commit_sha, isPrintArgument):
                 current_path = os.path.join(find_assvc(), "head/current")
                 with open(current_path, "r") as f:
                     commit_sha = f.read().strip()
+            commit_sha = deShorten_sha(commit_sha, get_history(assvc_path))
+
 
             if isPrint:
                 compare(commit_sha=commit_sha, show_diff_var=False, comparePrint=False)
                 print("\n")
+                if not isForce:
+                    confirmation = input(
+                        f"are you sure you want to reverse to commit {commit_sha}? (y/n): "
+                    )
 
-                confirmation = input(
-                    f"are you sure you want to reverse to commit {commit_sha}? (y/n): "
-                )
-
-                if confirmation.lower() != 'y':
-                    print("Reverse operation cancelled.")
-                    return
+                    if confirmation.lower() != 'y':
+                        print("Reverse operation cancelled.")
+                        return
 
         except KeyboardInterrupt:
             print("\nReverse operation cancelled.")
@@ -273,7 +274,7 @@ def extractDataTree(tree_content):
 def extractData(sha):
     try:
         global assvc_path
-        path = assvc_path + "/objects/" + sha[:2] + "/" + sha
+        path = os.path.join(assvc_path, "objects", sha[:2], sha)
         with open(path, "rb") as f:
             compressed = f.read()
         decompressed = zlib.decompress(compressed)

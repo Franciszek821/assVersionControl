@@ -3,8 +3,8 @@ import os
 import hashlib
 import zlib
 import time
+import platform
 
-config_path = os.path.expanduser("~/.config/assvc/config")
 
 def depth(parent):
     return 0 if parent == "" else parent.count(os.sep) + 1
@@ -99,8 +99,12 @@ def make_blob(file_path, assvc_path):
         with open(blob_path, "wb") as f:
             f.write(compressed)
         
-        st = os.stat(blob_path)
-        mode = st.st_mode & 0o777
+        import platform
+        if platform.system() == "Windows":
+            mode = 0o100644  # Default file mode
+        else:
+            st = os.stat(blob_path)
+            mode = st.st_mode & 0o777
         return sha, mode
     except IOError:
         raise Exception(f"Cannot read file: {file_path}")
@@ -124,8 +128,9 @@ def make_tree(parent, blob, directory, assvc_path, tree_sha):
         sha = hashlib.sha1("".join(parentContent).encode()).hexdigest()
         compressed = zlib.compress("".join(parentContent).encode())
         first_two = sha[:2]
-        os.makedirs(assvc_path + "/objects/" + first_two, exist_ok=True)
-        parent_path = assvc_path + "/objects/" + first_two + "/" + sha
+        objects_dir = os.path.join(assvc_path, "objects", first_two)
+        os.makedirs(objects_dir, exist_ok=True)
+        parent_path = os.path.join(objects_dir, sha)
         with open(parent_path, "wb") as f:
             f.write(compressed)
 
@@ -145,8 +150,9 @@ def make_tree_empty_dir(dir, assvc_path, tree_sha):
         sha = hashlib.sha1(dirContent).hexdigest()
         compressed = zlib.compress(dirContent)
         first_two = sha[:2]
-        os.makedirs(assvc_path + "/objects/" + first_two, exist_ok=True)
-        parent_path = assvc_path + "/objects/" + first_two + "/" + sha
+        objects_dir = os.path.join(assvc_path, "objects", first_two)
+        os.makedirs(objects_dir, exist_ok=True)
+        parent_path = os.path.join(objects_dir, sha)
         with open(parent_path, "wb") as f:
             f.write(compressed)
 
@@ -165,12 +171,14 @@ def make_commit(tree_root_sha, assvc_path, message):
         sha = hashlib.sha1(commit_content.encode()).hexdigest()
         compressed = zlib.compress(commit_content.encode())
         first_two = sha[:2]
-        os.makedirs(assvc_path + "/objects/" + first_two, exist_ok=True)
-        commit_path = assvc_path + "/objects/" + first_two + "/" + sha
+        objects_dir = os.path.join(assvc_path, "objects", first_two)
+        os.makedirs(objects_dir, exist_ok=True)
+        commit_path = os.path.join(objects_dir, sha)
         with open(commit_path, "wb") as f:
             f.write(compressed)
-        print(f"Commit created Message: {message} SHA: {sha}")
-        with open(assvc_path + '/head/current', "w") as f:
+        print(f"Commit created Message: {message} SHA: {shorten_sha(sha, get_history(assvc_path))}")
+        current_file = os.path.join(assvc_path, 'head', 'current')
+        with open(current_file, "w") as f:
             f.write(sha)
         save_history(assvc_path, sha)
         return sha
@@ -196,7 +204,7 @@ def find_assvc():
 
 def save_history(assvc_path, sha):
     try:
-        with open(assvc_path + '/history/history', "a") as f:
+        with open(get_history(assvc_path), "a") as f:
             f.write(sha + '\n')
     except IOError:
         print("Warning: Could not save history")
@@ -228,7 +236,37 @@ def get_ignore(parent_path):
 
 
 
+def get_history(assvc_path):
+    history_path = os.path.join(assvc_path, "history", "history")
+    return history_path
 
 
+def shorten_sha(full_sha, history_path):
+    try:
+        with open(history_path, "r") as f:
+            commits = f.readlines()
+    except IOError:
+        print("Error: Unable to read history file.")
+        return
+    for i in range(7, len(full_sha) + 1):
+        shorten_sha = full_sha[:i]
+        for commit_sha in commits:
+            if commit_sha.strip().startswith(shorten_sha):
+                return shorten_sha
+            else:
+                continue
+    return full_sha
 
+def deShorten_sha(short_sha, history_path):
+    try:
+        with open(history_path, "r") as f:
+            commits = f.readlines()
+    except IOError:
+        print("Error: Unable to read history file.")
+        return
+    for i in commits:
+        if i.strip().startswith(short_sha):
+            return i.strip()
+    print("Error: No commit found with the given short SHA.")
+    return None
 

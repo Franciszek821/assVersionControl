@@ -6,6 +6,7 @@ import difflib
 
 from assvcPackage.commit import find_assvc
 from assvcPackage.commit import get_ignore
+from assvcPackage.commit import deShorten_sha, get_history
 
 assvc_path = find_assvc()
 if assvc_path:
@@ -27,6 +28,8 @@ def compare(commit_sha, show_diff_var, comparePrint):
                 print("Error: Could not read current commit reference")
                 return
         
+        commit_sha = deShorten_sha(commit_sha, get_history(assvc_path))
+
         if not assvc_path:
             print("Error: .assvc directory not found.")
             return
@@ -211,7 +214,7 @@ def extractDataTree(tree_content):
 
 def extractData(sha):
     try:
-        path = assvc_path + "/objects/" + sha[:2] + "/" + sha
+        path = os.path.join(assvc_path, "objects", sha[:2], sha)
         with open(path, "rb") as f:
             compressed = f.read()
         decompressed = zlib.decompress(compressed)
@@ -234,8 +237,8 @@ def is_text_file(filepath):
 
 def show_diff(old_text, new_text, filename):
     try:
-        old_lines = old_text.splitlines(keepends=True)
-        new_lines = new_text.splitlines(keepends=True)
+        old_lines = old_text.splitlines()
+        new_lines = new_text.splitlines()
 
         diff = difflib.unified_diff(
             old_lines,
@@ -245,10 +248,47 @@ def show_diff(old_text, new_text, filename):
             lineterm=""
         )
 
+        old_line_num = 0
+        new_line_num = 0
+        printed_anything = False
+
         for line in diff:
-            if line.startswith("+") and not line.startswith("+++"):
-                print("\033[32m" + line + "\033[0m")
-            elif line.startswith("-") and not line.startswith("---"):
-                print("\033[31m" + line + "\033[0m")
+            if line.startswith('---') or line.startswith('+++'):
+                continue
+
+            # Hunk header
+            if line.startswith('@@'):
+                if printed_anything:
+                    print()
+
+                parts = line.split()
+                old_info = parts[1]
+                new_info = parts[2]
+
+                old_line_num = int(old_info.split(',')[0][1:]) - 1
+                new_line_num = int(new_info.split(',')[0][1:]) - 1
+                continue
+
+            # Removed line
+            if line.startswith('-'):
+                old_line_num += 1
+                print(f"\033[31m-{old_line_num:>4}: {line[1:]}\033[0m")
+                printed_anything = True
+                continue
+
+            # Added line
+            if line.startswith('+'):
+                new_line_num += 1
+                print(f"\033[32m+{new_line_num:>4}: {line[1:]}\033[0m")
+                printed_anything = True
+                continue
+
+            # Context line
+            old_line_num += 1
+            new_line_num += 1
+
     except Exception:
         print(f"Warning: Could not generate diff for {filename}")
+
+
+
