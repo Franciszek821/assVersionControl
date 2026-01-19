@@ -77,13 +77,16 @@ try:
 except KeyboardInterrupt:
     print("\n\nOperation cancelled by user.")
     sys.exit(0)
-except Exception:
-    print("Error: An unexpected error occurred.")
-    sys.exit(1)
+#except Exception:
+#    print("Error: An unexpected error occurred.")
+#    sys.exit(1)
 
 
 #TODO:
 '''
+BASIC:
+- 
+
 ADVANCED:
 - Add gui application
 

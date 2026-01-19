@@ -4,9 +4,7 @@ import zlib
 import time
 import difflib
 
-from assvcPackage.commit import find_assvc
-from assvcPackage.commit import get_ignore
-from assvcPackage.commit import deShorten_sha, get_history
+from assvcPackage.utils import find_assvc, get_ignore, deShorten_sha, get_history, extractDataCommit, extractDataTree, extractData, show_diff, is_text_bytes, is_text_file
 
 assvc_path = find_assvc()
 if assvc_path:
@@ -140,26 +138,35 @@ def check(path_check):
 
             try:
                 size = os.path.getsize(path)
-                with open(path, "r", encoding="utf-8") as f:
+                with open(path, "rb") as f:
                     fileContent = f.read()
 
                 shapath = os.path.join(assvc_path, "objects", sha[:2], sha)
                 with open(shapath, "rb") as f:
                     compressed = f.read()
 
-                old_blob_full = zlib.decompress(compressed).decode("utf-8", errors="replace")
-                old_content = old_blob_full.split("\n", 1)[1]
+                old_blob_full = zlib.decompress(compressed)
+                header_end = old_blob_full.find(b'\n')
+                old_content_bytes = old_blob_full[header_end+1:]
 
-                now_blob_full = f"blob {size}\n{fileContent}"
-                shaNow = hashlib.sha1(now_blob_full.encode()).hexdigest()
+
+                now_blob_full = b"blob " + str(len(fileContent)).encode() + b"\n" + fileContent 
+                shaNow = hashlib.sha1(now_blob_full).hexdigest()
+
 
                 now_blob = fileContent
 
                 if shaNow != sha:
-
                     print(f"{YELLOW}  MODIFIED:{RESET} {path}")
 
-                    show_diff(old_content, now_blob, path)
+                    # Only show diff if the file is text
+                    if is_text_bytes(old_content_bytes) and is_text_bytes(now_blob):
+                        old_text = old_content_bytes.decode("utf-8", errors="replace")
+                        new_text = now_blob.decode("utf-8", errors="replace")
+                        show_diff(old_text, new_text, path)
+                    else:
+                        print(f"{YELLOW}    MODIFIED (binary, no diff):{RESET} {path}")
+
             except IOError:
                 print(f"Warning: Could not read file {path}")
                 continue
@@ -171,75 +178,3 @@ def check(path_check):
 
     except Exception:
         print("Error: An error occurred during comparison check.")
-
-def extractDataCommit(commit_content):
-    try:
-        lines = commit_content.strip().splitlines()
-        treeSHA = lines[0].split(" ", 1)[1]
-
-        commiter_parts = lines[1].split(" ")
-        commiter = commiter_parts[1]
-        timestamp = commiter_parts[2]
-
-        message = "\n".join(lines[3:])
-        return treeSHA, commiter, timestamp, message
-    except (IndexError, ValueError):
-        raise Exception("Corrupted commit data")
-
-def extractDataTree(tree_content):
-    try:
-        lines = tree_content.strip().splitlines()
-        entries = []
-        for line in lines:
-            parts = line.split(" ", 2)
-            if len(parts) < 3:
-                continue
-            entry_type, name, sha = parts
-            entries.append((entry_type, name, sha))
-        return entries
-    except Exception:
-        return []
-
-def extractData(sha):
-    try:
-        path = os.path.join(assvc_path, "objects", sha[:2], sha)
-        with open(path, "rb") as f:
-            compressed = f.read()
-        decompressed = zlib.decompress(compressed)
-        try:
-            return decompressed.decode("utf-8")
-        except UnicodeDecodeError:
-            return decompressed
-    except FileNotFoundError:
-        raise Exception(f"Object {sha} not found")
-    except Exception as e:
-        raise
-
-def is_text_file(filepath):
-    try:
-        with open(filepath, "r", encoding="utf-8") as f:
-            f.read()
-        return True
-    except (UnicodeDecodeError, OSError):
-        return False
-
-def show_diff(old_text, new_text, filename):
-    try:
-        old_lines = old_text.splitlines(keepends=True)
-        new_lines = new_text.splitlines(keepends=True)
-
-        diff = difflib.unified_diff(
-            old_lines,
-            new_lines,
-            fromfile=filename + " (previous)",
-            tofile=filename + " (current)",
-            lineterm=""
-        )
-
-        for line in diff:
-            if line.startswith("+") and not line.startswith("+++"):
-                print("\033[32m" + line + "\033[0m")
-            elif line.startswith("-") and not line.startswith("---"):
-                print("\033[31m" + line + "\033[0m")
-    except Exception:
-        print(f"Warning: Could not generate diff for {filename}")

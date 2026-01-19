@@ -1,7 +1,7 @@
 import os
 import time
 import zlib
-from assvcPackage.commit import find_assvc, shorten_sha, get_history
+from assvcPackage.utils import find_assvc, shorten_sha, get_history
 
 
 def printHistory(long):

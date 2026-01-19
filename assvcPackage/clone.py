@@ -6,8 +6,7 @@ import time
 import difflib
 import shutil
 
-from assvcPackage.commit import find_assvc
-from assvcPackage.commit import get_ignore
+from assvcPackage.utils import find_assvc, get_ignore
 from assvcPackage.reverse import reverse
 
 
@@ -41,7 +40,7 @@ def comImport(zip_path):
             return
         
         try:
-            reverse(commit_sha="latest", isPrintArgument=False)
+            reverse(commit_sha="latest", isPrintArgument=False, isForce=True)
         except Exception:
             print("Error: Failed to restore repository state.")
             return

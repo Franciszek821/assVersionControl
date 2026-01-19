@@ -5,11 +5,8 @@ import time
 import difflib
 import shutil
 
-from assvcPackage.commit import find_assvc, get_ignore, get_history, deShorten_sha
+from assvcPackage.utils import find_assvc, get_ignore, deShorten_sha, get_history, extractDataCommit, extractDataTree, extractData
 from assvcPackage.compare import compare
-
-
-
 
 global isPrint
 global assvc_path
@@ -126,7 +123,6 @@ def reverse(commit_sha, isPrintArgument, isForce):
     except Exception:
         print("Error: An unexpected error occurred during reverse operation.")
 
-# colors
 RED    = "\033[91m"
 GREEN  = "\033[92m"
 YELLOW = "\033[93m"
@@ -161,31 +157,27 @@ def check(path_check):
                     print(f"Warning: Could not restore {path}")
                 continue
 
-            if not is_text_file(path):
+            if not os.path.isfile(path):
                 continue
 
             try:
-                size = os.path.getsize(path)
-                with open(path, "r", encoding="utf-8") as f:
-                    fileContent = f.read()
-
                 shapath = os.path.join(assvc_path, "objects", sha[:2], sha)
                 with open(shapath, "rb") as f:
                     compressed = f.read()
+                old_blob_full = zlib.decompress(compressed)
+                header_end = old_blob_full.find(b'\n')
+                old_content_bytes = old_blob_full[header_end+1:]
 
-                old_blob_full = zlib.decompress(compressed).decode("utf-8", errors="replace")
-                commit_text = old_blob_full.split("\n", 1)[1]
+                with open(path, "rb") as f:
+                    file_content = f.read()
 
-                now_blob_full = f"blob {size}\n{fileContent}"
-                shaNow = hashlib.sha1(now_blob_full.encode()).hexdigest()
+                now_blob_full = b"blob " + str(len(file_content)).encode() + b"\n" + file_content
+                shaNow = hashlib.sha1(now_blob_full).hexdigest()
 
                 if shaNow != sha:
                     if isPrint:
                         print(f"{YELLOW}  REVERSED CHANGES:{RESET} {path}")
-                    changeFileContent(path, commit_text)
-            except IOError:
-                print(f"Warning: Could not process file {path}")
-                continue
+                    changeFileContent(path, old_content_bytes)
             except Exception:
                 print(f"Warning: Could not reverse changes for {path}")
                 continue
@@ -202,98 +194,29 @@ def check(path_check):
     except Exception:
         print("Error: An error occurred during reverse check.")
 
-def changeFileContent(path, commit_text):
-    try:
-        with open(path, "w", encoding="utf-8") as f:
-            f.write(commit_text)
-    except IOError:
-        raise Exception(f"Cannot write to file: {path}")
+def changeFileContent(path, content_bytes):
+    with open(path, "wb") as f:
+        f.write(content_bytes)
 
 def reverseAdd(item):
-    try:
-        if os.path.isfile(item):
-            os.remove(item)
-        elif os.path.isdir(item):
-            shutil.rmtree(item)
-    except PermissionError:
-        raise Exception(f"Permission denied: {item}")
-    except Exception as e:
-        raise
+    if os.path.isfile(item):
+        os.remove(item)
+    elif os.path.isdir(item):
+        shutil.rmtree(item)
 
 def restore_missing_file(path, sha):
-    try:
-        parent_dir = os.path.dirname(path)
+    shapath = os.path.join(assvc_path, "objects", sha[:2], sha)
+    with open(shapath, "rb") as f:
+        compressed = f.read()
+    blob_full = zlib.decompress(compressed)
+    header_end = blob_full.find(b'\n')
+    content = blob_full[header_end+1:]
+    parent_dir = os.path.dirname(path)
+    if parent_dir and not os.path.exists(parent_dir):
+        os.makedirs(parent_dir, exist_ok=True)
+    with open(path, "wb") as f:
+        f.write(content)
 
-        if parent_dir and os.path.exists(parent_dir) and os.path.isfile(parent_dir):
-            os.remove(parent_dir)
-        if parent_dir and not os.path.exists(parent_dir):
-            os.makedirs(parent_dir, exist_ok=True)
-
-        shapath = os.path.join(assvc_path, "objects", sha[:2], sha)
-        with open(shapath, "rb") as f:
-            compressed = f.read()
-
-        blob_full = zlib.decompress(compressed).decode("utf-8", errors="replace")
-        content = blob_full.split("\n", 1)[1]
-
-        with open(path, "w", encoding="utf-8") as f:
-            f.write(content)
-    except IOError:
-        raise Exception(f"Cannot restore file: {path}")
-    except Exception as e:
-        raise
-
-def extractDataCommit(commit_content):
-    try:
-        lines = commit_content.strip().splitlines()
-        treeSHA = lines[0].split(" ", 1)[1]
-
-        commiter_parts = lines[1].split(" ")
-        commiter = commiter_parts[1]
-        timestamp = commiter_parts[2]
-
-        message = "\n".join(lines[3:])
-        return treeSHA, commiter, timestamp, message
-    except (IndexError, ValueError):
-        raise Exception("Corrupted commit data")
-
-def extractDataTree(tree_content):
-    try:
-        lines = tree_content.strip().splitlines()
-        entries = []
-        for line in lines:
-            parts = line.split(" ", 2)
-            if len(parts) < 3:
-                continue
-            entry_type, name, sha = parts
-            entries.append((entry_type, name, sha))
-        return entries
-    except Exception:
-        return []
-
-def extractData(sha):
-    try:
-        global assvc_path
-        path = os.path.join(assvc_path, "objects", sha[:2], sha)
-        with open(path, "rb") as f:
-            compressed = f.read()
-        decompressed = zlib.decompress(compressed)
-        try:
-            return decompressed.decode("utf-8")
-        except UnicodeDecodeError:
-            return decompressed
-    except FileNotFoundError:
-        raise Exception(f"Object {sha} not found")
-    except Exception as e:
-        raise
-
-def is_text_file(filepath):
-    try:
-        with open(filepath, "r", encoding="utf-8") as f:
-            f.read()
-        return True
-    except (UnicodeDecodeError, OSError):
-        return False
 
 
 

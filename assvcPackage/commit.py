@@ -3,11 +3,10 @@ import os
 import hashlib
 import zlib
 import time
-import platform
+from assvcPackage.utils import find_assvc, get_ignore, get_history, shorten_sha
 
 
-def depth(parent):
-    return 0 if parent == "" else parent.count(os.sep) + 1
+
 
 def commit(message):
     try:
@@ -36,7 +35,7 @@ def commit(message):
                 if file in ignore_files:
                     continue
                 file_path = os.path.join(root, file)
-                if not is_text_file(file_path):
+                if not os.path.isfile(file_path):
                     continue
                 try:
                     shaName, mode = make_blob(file_path, assvc_path)
@@ -84,29 +83,32 @@ def commit(message):
 
 def make_blob(file_path, assvc_path):
     try:
-        size = os.path.getsize(file_path)
+        with open(file_path, "rb") as f:
+            file_content = f.read()
 
-        with open(file_path, "r", encoding="utf-8") as f:
-            fileContent = f.read()
+        size = len(file_content)
+        header = f"blob {size}\n".encode()
+        blob_content = header + file_content
 
-        blobContent = "blob " + str(size) + "\n" + fileContent
-        sha = hashlib.sha1(blobContent.encode()).hexdigest()
-        compressed = zlib.compress(blobContent.encode())
+        sha = hashlib.sha1(blob_content).hexdigest()
+        compressed = zlib.compress(blob_content)
+
         first_two = sha[:2]
         objects_dir = os.path.join(assvc_path, "objects", first_two)
         os.makedirs(objects_dir, exist_ok=True)
+
         blob_path = os.path.join(objects_dir, sha)
         with open(blob_path, "wb") as f:
             f.write(compressed)
-        
 
-        st = os.stat(blob_path)
+        st = os.stat(file_path)
         mode = st.st_mode & 0o777
+
         return sha, mode
-    except IOError:
+
+    except Exception:
         raise Exception(f"Cannot read file: {file_path}")
-    except Exception as e:
-        raise
+
 
 def make_tree(parent, blob, directory, assvc_path, tree_sha):
     try:
@@ -184,20 +186,6 @@ def make_commit(tree_root_sha, assvc_path, message):
     except Exception:
         print("Error: Failed to create commit.")
 
-def is_text_file(filepath):
-    try:
-        with open(filepath, "r", encoding="utf-8") as f:
-            f.read()
-        return True
-    except (UnicodeDecodeError, OSError):
-        return False
-
-def find_assvc():
-    try:
-        assvc_path = os.path.join(os.getcwd(), ".assvc")
-        return assvc_path if os.path.exists(assvc_path) else None
-    except Exception:
-        return None
 
 def save_history(assvc_path, sha):
     try:
@@ -206,64 +194,7 @@ def save_history(assvc_path, sha):
     except IOError:
         print("Warning: Could not save history")
 
-def get_ignore(parent_path):
-    ignore_files = set()
-    ignore_dirs = {'.assvc', '.git', '__pycache__'}
-
-    assignore_path = os.path.join(parent_path, ".assignore")
-    try:
-        if not os.path.isfile(assignore_path):
-            return ignore_dirs, ignore_files
-
-        with open(assignore_path, "r", encoding="utf-8") as f:
-            for line in f:
-                line = line.strip()
-
-                if not line or line.startswith("#"):
-                    continue
-
-                if line.startswith("/"):
-                    ignore_dirs.add(line.lstrip("/"))
-                else:
-                    ignore_files.add(line)
-    except IOError:
-        print("Warning: Could not read .assignore file")
-
-    return ignore_dirs, ignore_files
 
 
 
-def get_history(assvc_path):
-    history_path = os.path.join(assvc_path, "history", "history")
-    return history_path
-
-
-def shorten_sha(full_sha, history_path):
-    try:
-        with open(history_path, "r") as f:
-            commits = f.readlines()
-    except IOError:
-        print("Error: Unable to read history file.")
-        return
-    for i in range(7, len(full_sha) + 1):
-        shorten_sha = full_sha[:i]
-        for commit_sha in commits:
-            if commit_sha.strip().startswith(shorten_sha):
-                return shorten_sha
-            else:
-                continue
-    return full_sha
-
-def deShorten_sha(short_sha, history_path):
-    try:
-        with open(history_path, "r") as f:
-            commits = f.readlines()
-    except IOError:
-        print("Error: Unable to read history file.")
-        return
-    for i in commits:
-        if i.strip().startswith(short_sha):
-            return i.strip()
-    print("Error: No commit found with the given short SHA.")
-    return None
 
