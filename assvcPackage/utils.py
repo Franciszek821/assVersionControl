@@ -13,6 +13,7 @@ def find_assvc():
         assvc_path = os.path.join(os.getcwd(), ".assvc")
         return assvc_path if os.path.exists(assvc_path) else None
     except Exception:
+        print("Error: Unable to locate .assvc directory.")
         return None
     
 assvc_path = find_assvc()
@@ -117,6 +118,35 @@ def extractData(sha):
     except Exception as e:
         raise
 
+def extractCommitText(commit_sha):
+    
+    commit_sha = deShorten_sha(commit_sha, get_history(assvc_path))
+
+    if not assvc_path:
+        print("Error: .assvc directory not found.")
+        return
+    
+    commit_path = os.path.join(assvc_path, "objects", commit_sha[:2], commit_sha)
+    try:
+        with open(commit_path, "rb") as f:
+            compressed_data = f.read()
+        try:
+            decompressed = zlib.decompress(compressed_data)
+            commit_text = decompressed.decode("utf-8", errors="replace")
+            return commit_text
+        except Exception:
+            print("Error: Corrupted commit data.")
+            return None
+    except FileNotFoundError:
+        print(f"Error: Commit '{commit_sha}' not found.")
+        return None
+    except IOError:
+        print("Error: Unable to read commit data.")
+        return None
+    
+
+
+
 def show_diff(old_text, new_text, filename):
     try:
         old_lines = old_text.splitlines(keepends=True)
@@ -153,3 +183,17 @@ def shorten_sha(full_sha, history_path):
             else:
                 continue
     return full_sha
+
+def read_index(assvc_path):
+    index_path = os.path.join(assvc_path, "index")
+
+    if not os.path.exists(index_path):
+        return []
+
+    with open(index_path, "r") as f:
+        return [line.strip() for line in f if line.strip()]
+
+
+def is_dir_empty(path):
+    return os.path.isdir(path) and not os.listdir(path)
+

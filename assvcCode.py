@@ -8,7 +8,7 @@ from assvcPackage.history import printHistory
 from assvcPackage.reverse import reverse
 from assvcPackage.clone import comImport, comExport
 from assvcPackage.diff import diff
-
+from assvcPackage.stage import stage,  unstage, clear, seeStaged
 
 # CLI setup
 parser = argparse.ArgumentParser(prog="assvc"
@@ -21,20 +21,31 @@ sub.add_parser("start",help="Initialize a new .assvc folder in the current direc
 #installer
 sub.add_parser("installer", help="Install or uninstall assvc to/from ~/.local/bin")
 
-#import/export
-import_parser = sub.add_parser("import", help="Import repository data, latest commit, add argument zip_path")
+#repository group (import/export)
+repo_parser = sub.add_parser("repository", help="Repository operations (import/export)")
+repo_sub = repo_parser.add_subparsers(dest="repo_command")
+
+import_parser = repo_sub.add_parser("import", help="Import repository data, latest commit, add argument zip_path")
 import_parser.add_argument("zip_path", type=str, help="Path to the zip file to import")
-sub.add_parser("export", help="Export repository data")
+repo_sub.add_parser("export", help="Export repository data")
 
 #commit
 commit_parser = sub.add_parser("commit", help="Create a new commit with a message")
 commit_parser.add_argument("-m", "--message", type=str, default="Commit without message",
                            help="Commit message")
+commit_parser.add_argument("-a", "--all", action="store_true", help="Stage all changes before committing")
 
-#compare
-compare_parser = sub.add_parser("compare", help="Compare changes between selected commit and working version (default: latest commit)")
+#compare group (compare/diff)
+compare_group = sub.add_parser("compare", help="Compare and diff operations")
+compare_sub = compare_group.add_subparsers(dest="compare_command")
+
+compare_parser = compare_sub.add_parser("all", help="Compare changes between selected commit and working version (default: latest commit)")
 compare_parser.add_argument("-s", "--sha", type=str, default="latest", help="SHA of the commit to compare to")
 compare_parser.add_argument("-d", "--diff", action="store_true",help="Show diff output")
+
+diff_parser = compare_sub.add_parser("diff", help="Show differences between working version and latest commit on singular files")
+diff_parser.add_argument("-s", "--sha", type=str, default="latest", help="SHA of the commit to compare to")
+diff_parser.add_argument("file_path", type=str, help="Path to the file to show differences for")
 
 #history
 history_parser = sub.add_parser("history", help="Show commit history")
@@ -45,11 +56,23 @@ reverse_parser = sub.add_parser("reverse", help="Revert to a previous commit (de
 reverse_parser.add_argument("-s", "--sha", type=str, default="latest", help="SHA of the commit to revert to")
 reverse_parser.add_argument("-f", "--force", action="store_true", help="Force reverse without confirmation")
 
-#diff
-diff_parser = sub.add_parser("diff", help="Show differences between working version and latest commit on singular files")
-diff_parser.add_argument("-s", "--sha", type=str, default="latest", help="SHA of the commit to compare to")
-diff_parser.add_argument("file_path", type=str, help="Path to the file to show differences for")
+#staging group
+staging_group = sub.add_parser("staging", help="Staging operations")
+staging_sub = staging_group.add_subparsers(dest="staging_command")
 
+stage_parser = staging_sub.add_parser("stage", help="Stage files for commit")
+stage_parser.add_argument("-a", '--all', action="store_true", help="Stage all changed files for commit")
+stage_parser.add_argument("file_paths", nargs="*", type=str, help="Paths to files to stage for commit")
+
+unstage_parser = staging_sub.add_parser("unstage", help="Unstage files from commit")
+unstage_parser.add_argument("file_paths", nargs="+", type=str, help="Paths to files to unstage from commit")
+
+staging_sub.add_parser("clear", help="Clear all staged files")
+
+staging_sub.add_parser("show", help="See all staged files")
+
+#Help
+sub.add_parser("help", help="Show help for staging commands")
 
 try:
     args = parser.parse_args()
@@ -59,33 +82,58 @@ try:
     elif args.command == "commit":
         commit(message=args.message)
     elif args.command == "compare":
-        compare(commit_sha=args.sha, show_diff_var=args.diff, comparePrint=True)
+        if args.compare_command == "all":
+            compare(commit_sha=args.sha, show_diff_var=args.diff, comparePrint=True)
+        elif args.compare_command == "diff":
+            diff(commit_sha=args.sha, file_path=args.file_path)
+        else:
+            compare_group.print_help()
     elif args.command == "installer":
         install()
     elif args.command == "history":
         printHistory(long=args.long)
     elif args.command == "reverse":
         reverse(commit_sha=args.sha, isPrintArgument=True, isForce=args.force)
-    elif args.command == "import":
-        comImport(args.zip_path)
-    elif args.command == "export":
-        comExport()
-    elif args.command == "diff":
-        diff(commit_sha=args.sha, file_path=args.file_path)
+    elif args.command == "repository":
+        if args.repo_command == "import":
+            comImport(args.zip_path)
+        elif args.repo_command == "export":
+            comExport()
+        else:
+            repo_parser.print_help()
+    elif args.command == "staging":
+        if args.staging_command == "stage":
+            if args.all:
+                stage(file_paths=[], stage_all=True)
+            elif args.file_paths:
+                stage(file_paths=args.file_paths, stage_all=False)
+            else:
+                print("Error: Either provide file paths or use -a to stage all changes")
+        elif args.staging_command == "unstage":
+            unstage(file_paths=args.file_paths)
+        elif args.staging_command == "clear":
+            clear()
+        elif args.staging_command == "show":
+            seeStaged()
+        elif args.staging_command == "help":
+            staging_group.print_help()
+        else:
+            staging_group.print_help()
     else:
         parser.print_help()
 except KeyboardInterrupt:
     print("\n\nOperation cancelled by user.")
     sys.exit(0)
-#except Exception:
-#    print("Error: An unexpected error occurred.")
-#    sys.exit(1)
+except Exception:
+    print("Error: An unexpected error occurred.")
+    sys.exit(1)
 
 
 #TODO:
 '''
 BASIC:
-- 
+- Status command
+- Update Info with every command if there is a new version on github and a update command to update assvc
 
 ADVANCED:
 - Add gui application
@@ -97,4 +145,3 @@ ADVANCED:
 
 #pyinstaller --onefile --name assvcWindows assvcCode.py
 
-#pyinstaller --onefile --name assvcInstall installer.py

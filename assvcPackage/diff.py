@@ -13,6 +13,7 @@ if assvc_path:
 
 
 def diff(commit_sha, file_path):
+    file_path = os.path.abspath(file_path)
     try:
         if commit_sha == "latest":
             current_path = os.path.join(find_assvc(), "head/current")
@@ -159,7 +160,7 @@ def check(path_check):
                 if shaNow != sha:
                     print(f"{YELLOW}  MODIFIED:{RESET} {path}")
 
-                    # Only show diff if the file is text
+                    
                     if is_text_bytes(old_content_bytes) and is_text_bytes(now_blob):
                         old_text = old_content_bytes.decode("utf-8", errors="replace")
                         new_text = now_blob.decode("utf-8", errors="replace")

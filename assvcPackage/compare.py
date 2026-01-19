@@ -4,7 +4,7 @@ import zlib
 import time
 import difflib
 
-from assvcPackage.utils import find_assvc, get_ignore, deShorten_sha, get_history, extractDataCommit, extractDataTree, extractData, show_diff, is_text_bytes
+from assvcPackage.utils import find_assvc, get_ignore, deShorten_sha, get_history, extractDataCommit, extractDataTree, extractData, show_diff, is_text_bytes, extractCommitText
 
 assvc_path = find_assvc()
 if assvc_path:
@@ -12,8 +12,10 @@ if assvc_path:
     ignore_dirs, ignore_files = get_ignore(parent_path)
 
 global comparePrintGlobal
+global changesMade
+changesMade = []
 
-def compare(commit_sha, show_diff_var, comparePrint):
+def compare(commit_sha, show_diff_var, comparePrint, noPrint=False):
     global comparePrintGlobal
     try:
         comparePrintGlobal = comparePrint
@@ -25,40 +27,22 @@ def compare(commit_sha, show_diff_var, comparePrint):
             except IOError:
                 print("Error: Could not read current commit reference")
                 return
-        
-        commit_sha = deShorten_sha(commit_sha, get_history(assvc_path))
-
-        if not assvc_path:
-            print("Error: .assvc directory not found.")
+            
+        commit_text = extractCommitText(commit_sha)
+        if commit_text is None:
             return
         
-        commit_path = os.path.join(assvc_path, "objects", commit_sha[:2], commit_sha)
-        try:
-            with open(commit_path, "rb") as f:
-                compressed_data = f.read()
-        except FileNotFoundError:
-            print(f"Error: Commit '{commit_sha}' not found.")
-            return
-        except IOError:
-            print("Error: Unable to read commit data.")
-            return
-
-        try:
-            decompressed = zlib.decompress(compressed_data)
-            commit_text = decompressed.decode("utf-8", errors="replace")
-        except Exception:
-            print("Error: Corrupted commit data.")
-            return
-
         treeSHA, commiter, timestamp, message = extractDataCommit(commit_text)
-        if comparePrintGlobal:
-            print(f"Comparing with commit: {commiter} {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(int(timestamp)))}")
-            print(f"Message: {message}")
-        else:
-            print(f"Reversing with commit: {commiter} {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(int(timestamp)))}")
-            print(f"Message: {message}")
-            print("\n")
-            print("THE REVERT WILL")
+        
+        if not noPrint:
+            if comparePrintGlobal:
+                print(f"Comparing with commit: {commiter} {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(int(timestamp)))}")
+                print(f"Message: {message}")
+            else:
+                print(f"Reversing with commit: {commiter} {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(int(timestamp)))}")
+                print(f"Message: {message}")
+                print("\n")
+                print("THE REVERT WILL")
 
         root_tree_path = os.path.join(assvc_path, "objects", treeSHA[:2], treeSHA)
         try:
@@ -102,7 +86,8 @@ def compare(commit_sha, show_diff_var, comparePrint):
                 path = os.path.join(parent_path, name)
                 path_check.append((path, sha))
             
-        check(path_check, show_diff_var)
+        check(path_check, show_diff_var, noPrint)
+        return changesMade
     except Exception:
         print("Error: An unexpected error occurred during comparison.")
 
@@ -113,10 +98,12 @@ YELLOW = "\033[93m"
 BLUE   = "\033[94m"
 RESET  = "\033[0m"
 
-def check(path_check, show_diff_var):
+def check(path_check, show_diff_var, noPrint):
     global comparePrintGlobal
     try:
-        print()
+        
+        if not noPrint:
+            print()
 
         dirsFilesAll = []
         for root, dirs, files in os.walk(parent_path):
@@ -151,7 +138,9 @@ def check(path_check, show_diff_var):
         
                 if shaNow != sha:
                     if comparePrintGlobal:
-                        print(f"{YELLOW}  MODIFIED:{RESET} {path}")
+                        if not noPrint:
+                            print(f"{YELLOW}  MODIFIED:{RESET} {path}")
+                        changesMade.append(path)
                     else:
                         print(f"{YELLOW}  MODIFY:{RESET} {path}")
         
@@ -161,17 +150,28 @@ def check(path_check, show_diff_var):
                             new_text = file_content.decode('utf-8', errors='replace')
                             show_diff(old_text, new_text, path)
                         else:
-                            print(f"{YELLOW}  MODIFIED (binary, no diff):{RESET} {path}")
+                            if not noPrint:
+                                print(f"{YELLOW}  MODIFIED (binary, no diff):{RESET} {path}")
             except Exception:
                 print(f"Warning: Could not process file {path}")
-        
+        tracked_paths = [path for path, sha in path_check]
+        for item in dirsFilesAll:
+            if item not in tracked_paths:
+                if comparePrintGlobal:
+                    if not noPrint:
+                        print(f"{GREEN}  NEW:{RESET} {item}")
+                    changesMade.append(item)
+                else:
+                    print(f"{RED}  DELETE:{RESET} {item}")
 
         commit_paths = [path for path, sha in path_check]
         
         for path in commit_paths:
             if not os.path.exists(path):
                 if comparePrintGlobal:
-                    print(f"{RED}  MISSING:{RESET} {path}")
+                    if not noPrint:
+                        print(f"{RED}  DELETED:{RESET} {path}")
+                    changesMade.append(path)
                 else:
                     print(f"{GREEN}  ADD:{RESET} {path}")
         
@@ -181,3 +181,4 @@ def check(path_check, show_diff_var):
 
 
 
+# test
