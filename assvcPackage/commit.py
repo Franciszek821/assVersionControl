@@ -99,12 +99,9 @@ def make_blob(file_path, assvc_path):
         with open(blob_path, "wb") as f:
             f.write(compressed)
         
-        import platform
-        if platform.system() == "Windows":
-            mode = 0o100644  # Default file mode
-        else:
-            st = os.stat(blob_path)
-            mode = st.st_mode & 0o777
+
+        st = os.stat(blob_path)
+        mode = st.st_mode & 0o777
         return sha, mode
     except IOError:
         raise Exception(f"Cannot read file: {file_path}")

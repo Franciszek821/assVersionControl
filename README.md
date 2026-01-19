@@ -5,9 +5,6 @@ Version control made by me.
 Use command "chmod +x ./assvcLinux" to give permision to file.
 To install globally to work everywhere use command "./assvcLinux install".
 After installing globally you can use command "assvc -h".
-## Instaling Windows
-To install globally to work everywhere use command "assvcWindows.exe install".
-After installing globally you can use command "assvc -h".
 
 ## Requirements
 - Python 3.10+

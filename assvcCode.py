@@ -84,7 +84,6 @@ except Exception:
 
 #TODO:
 '''
-- Add windows support
 ADVANCED:
 - Add gui application
 
