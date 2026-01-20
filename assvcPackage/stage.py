@@ -3,7 +3,7 @@ import os
 from assvcPackage.compare import compare
 from assvcPackage.utils import find_assvc, get_ignore
 
-def stage(file_paths, stage_all=False):
+def stage(file_paths=None, stage_all=False):
     if stage_all:
         return stageAll()
     assvc_path = find_assvc()

@@ -25,8 +25,21 @@ def compare(commit_sha, show_diff_var, comparePrint, noPrint=False):
                 with open(current_path, "r") as f:
                     commit_sha = f.read().strip()
             except IOError:
-                print("Error: Could not read current commit reference")
-                return
+                if not noPrint:
+                    print("Info: No commits yet. All files will be considered new.")
+                # Return all files in the directory as new
+                assvc_path = find_assvc()
+                if assvc_path:
+                    parent_path = os.path.dirname(assvc_path)
+                    ignore_dirs, ignore_files = get_ignore(parent_path)
+                    all_files = []
+                    for root, dirs, files in os.walk(parent_path):
+                        dirs[:] = [d for d in dirs if d not in ignore_dirs]
+                        for f in files:
+                            if f not in ignore_files:
+                                all_files.append(os.path.join(root, f))
+                    return all_files
+                return []
             
         commit_text = extractCommitText(commit_sha)
         if commit_text is None:

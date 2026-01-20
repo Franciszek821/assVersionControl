@@ -1,6 +1,5 @@
 import os
 import getpass
-from assvcPackage.commit import commit
 
 
 
@@ -22,7 +21,19 @@ def start():
         os.makedirs('.assvc/history', exist_ok=True)
         print("Created .assvc/history directory")
         
-        commit(message="Initial commit")
+        os.makedirs('.assvc/head', exist_ok=True)
+        print("Created .assvc/head directory")
+        
+        # Create empty history file
+        history_file = os.path.join('.assvc', 'history', 'history')
+        with open(history_file, 'w') as f:
+            pass
+        print("Created history file")
+        
+        print("\n✓ Repository initialized successfully!")
+        print("Use 'assvc staging stage -a' to stage files")
+        print("Use 'assvc commit -m \"message\"' to create your first commit")
+        
     except PermissionError:
         print("Error: Permission denied. Unable to create directories in the current location.")
     except OSError as e:

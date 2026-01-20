@@ -4,13 +4,12 @@ import hashlib
 import zlib
 import time
 from assvcPackage.utils import find_assvc, get_ignore, get_history, shorten_sha, read_index, is_dir_empty, extractCommitText
-from assvcPackage.stage import clear
+from assvcPackage.stage import clear, stage
 
 
 
 
-def commit(message, stage_all=True):
-    
+def commit(message, stage_all=False):
     try:
         assvc_path = find_assvc()
         if assvc_path is None:
