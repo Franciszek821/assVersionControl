@@ -8,7 +8,7 @@ After installing globally you can use command "assvc -h".
 
 ## Requirements
 - Python 3.10+
-- No external dependencies
+- All of the needed dependencies are in the file called requirements.txt 
 
 
 ## Commands

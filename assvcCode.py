@@ -10,6 +10,11 @@ from assvcPackage.clone import comImport, comExport
 from assvcPackage.diff import diff
 from assvcPackage.stage import stage,  unstage, clear, seeStaged
 from assvcPackage.status import status
+from assvcPackage.utils import latest_release
+from packaging import version
+
+
+code_version = "1.1.0"
 
 # CLI setup
 parser = argparse.ArgumentParser(prog="assvc"
@@ -77,7 +82,9 @@ status_parser = sub.add_parser("status", help="Show the status of staged and uns
 
 #Help
 sub.add_parser("help", help="Show help for staging commands")
-
+tag = latest_release("Franciszek821", "assVersionControl")["tag"]
+if version.parse(tag) > version.parse(code_version):
+    print(f"Info: A new version of assvc is available: {tag} (current: {code_version}). Visit  https://github.com/Franciszek821/assVersionControl/releases for latest version.\n")
 try:
     args = parser.parse_args()
 
@@ -130,16 +137,14 @@ try:
 except KeyboardInterrupt:
     print("\n\nOperation cancelled by user.")
     sys.exit(0)
-#except Exception:
-#    print("Error: An unexpected error occurred.")
-#    sys.exit(1)
-#
+except Exception:
+    print("Error: An unexpected error occurred.")
+    sys.exit(1)
+
 
 #TODO:
 '''
-BASIC:
-- Status command
-- Update Info with every command if there is a new version on github and a update command to update assvc
+
 
 ADVANCED:
 - Add gui application

@@ -6,6 +6,8 @@ import zlib
 import time
 import difflib
 
+import requests
+
 
 
 def find_assvc():
@@ -197,3 +199,18 @@ def read_index(assvc_path):
 def is_dir_empty(path):
     return os.path.isdir(path) and not os.listdir(path)
 
+def latest_release(owner, repo):
+    url = f"https://api.github.com/repos/{owner}/{repo}/releases/latest"
+    r = requests.get(url, timeout=10)
+
+    if r.status_code != 200:
+        raise RuntimeError(f"GitHub API error: {r.status_code}")
+
+    data = r.json()
+    return {
+        "tag": data["tag_name"],
+        "name": data["name"],
+        "published_at": data["published_at"]
+    }
+
+#print(latest_release("Franciszek821", "assVersionControl"))
