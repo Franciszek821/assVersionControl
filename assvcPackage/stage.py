@@ -83,7 +83,8 @@ def clear():
         print("No files are currently staged.")
 
 
-def seeStaged():
+def seeStaged(isPrint=True):
+    listStaged = []
     assvc_path = find_assvc()
     if assvc_path is None:
         print("Error: not an assvc repository (run `assvc start` first).")
@@ -100,9 +101,13 @@ def seeStaged():
     if not staged_files:
         print("No files are currently staged.")
     else:
-        print("Staged files:")
+        if isPrint:
+            print("Staged files:")
         for sf in staged_files:
-            print(f" - {sf}")
+            listStaged.append(sf)
+            if isPrint:
+                print(f" - {sf}")
+        return listStaged
 
 def stageAll():
     assvc_path = find_assvc()

@@ -4,7 +4,8 @@ import zlib
 import time
 import difflib
 
-from assvcPackage.utils import find_assvc, get_ignore, deShorten_sha, get_history, extractDataCommit, extractDataTree, extractData, show_diff, is_text_bytes, is_text_file
+from assvcPackage.utils import (find_assvc, get_ignore, deShorten_sha, get_history, extractDataCommit,
+                                 extractDataTree, extractData, show_diff, is_text_bytes, is_text_file)
 
 assvc_path = find_assvc()
 if assvc_path:

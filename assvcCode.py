@@ -9,6 +9,7 @@ from assvcPackage.reverse import reverse
 from assvcPackage.clone import comImport, comExport
 from assvcPackage.diff import diff
 from assvcPackage.stage import stage,  unstage, clear, seeStaged
+from assvcPackage.status import status
 
 # CLI setup
 parser = argparse.ArgumentParser(prog="assvc"
@@ -33,7 +34,7 @@ repo_sub.add_parser("export", help="Export repository data")
 commit_parser = sub.add_parser("commit", help="Create a new commit with a message")
 commit_parser.add_argument("-m", "--message", type=str, default="Commit without message",
                            help="Commit message")
-commit_parser.add_argument("-a", "--all", action="store_true", help="Stage all changes before committing")
+
 
 #compare group (compare/diff)
 compare_group = sub.add_parser("compare", help="Compare and diff operations")
@@ -70,6 +71,9 @@ unstage_parser.add_argument("file_paths", nargs="+", type=str, help="Paths to fi
 staging_sub.add_parser("clear", help="Clear all staged files")
 
 staging_sub.add_parser("show", help="See all staged files")
+
+#status
+status_parser = sub.add_parser("status", help="Show the status of staged and unstaged files")
 
 #Help
 sub.add_parser("help", help="Show help for staging commands")
@@ -119,15 +123,17 @@ try:
             staging_group.print_help()
         else:
             staging_group.print_help()
+    elif args.command == "status":
+        status()
     else:
         parser.print_help()
 except KeyboardInterrupt:
     print("\n\nOperation cancelled by user.")
     sys.exit(0)
-except Exception:
-    print("Error: An unexpected error occurred.")
-    sys.exit(1)
-
+#except Exception:
+#    print("Error: An unexpected error occurred.")
+#    sys.exit(1)
+#
 
 #TODO:
 '''

@@ -5,7 +5,8 @@ import time
 import difflib
 import shutil
 
-from assvcPackage.utils import find_assvc, get_ignore, deShorten_sha, get_history, extractDataCommit, extractDataTree, extractData
+from assvcPackage.utils import (find_assvc, get_ignore, deShorten_sha, get_history,
+                                 extractDataCommit, extractDataTree, extractData)
 from assvcPackage.compare import compare
 
 global isPrint

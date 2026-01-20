@@ -4,19 +4,23 @@ import zlib
 import time
 import difflib
 
-from assvcPackage.utils import find_assvc, get_ignore, deShorten_sha, get_history, extractDataCommit, extractDataTree, extractData, show_diff, is_text_bytes, extractCommitText
+from assvcPackage.utils import (find_assvc, get_ignore, deShorten_sha, get_history, extractDataCommit, extractDataTree, extractData,
+                                 show_diff, is_text_bytes, extractCommitText)
 
-assvc_path = find_assvc()
-if assvc_path:
-    parent_path = os.path.dirname(assvc_path)
-    ignore_dirs, ignore_files = get_ignore(parent_path)
-
-global comparePrintGlobal
-global changesMade
+comparePrintGlobal = None
 changesMade = []
 
 def compare(commit_sha, show_diff_var, comparePrint, noPrint=False):
     global comparePrintGlobal
+    global changesMade
+    
+    assvc_path = find_assvc()
+    if not assvc_path:
+        print("Error: .assvc directory not found.")
+        return
+    
+    parent_path = os.path.dirname(assvc_path)
+    ignore_dirs, ignore_files = get_ignore(parent_path)
     try:
         comparePrintGlobal = comparePrint
         if commit_sha == "latest":
@@ -27,26 +31,20 @@ def compare(commit_sha, show_diff_var, comparePrint, noPrint=False):
             except IOError:
                 if not noPrint:
                     print("Info: No commits yet. All files will be considered new.")
-                # Return all files in the directory as new
-                assvc_path = find_assvc()
-                if assvc_path:
-                    parent_path = os.path.dirname(assvc_path)
-                    ignore_dirs, ignore_files = get_ignore(parent_path)
-                    all_files = []
-                    for root, dirs, files in os.walk(parent_path):
-                        dirs[:] = [d for d in dirs if d not in ignore_dirs]
-                        for f in files:
-                            if f not in ignore_files:
-                                all_files.append(os.path.join(root, f))
-                    return all_files
-                return []
-            
+                all_files = []
+                for root, dirs, files in os.walk(parent_path):
+                    dirs[:] = [d for d in dirs if d not in ignore_dirs]
+                    for f in files:
+                        if f not in ignore_files:
+                            all_files.append(os.path.join(root, f))
+                return all_files
+
         commit_text = extractCommitText(commit_sha)
         if commit_text is None:
             return
-        
+
         treeSHA, commiter, timestamp, message = extractDataCommit(commit_text)
-        
+
         if not noPrint:
             if comparePrintGlobal:
                 print(f"Comparing with commit: {commiter} {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(int(timestamp)))}")
@@ -64,10 +62,8 @@ def compare(commit_sha, show_diff_var, comparePrint, noPrint=False):
         except Exception:
             print("Error: Could not read tree data.")
             return
-
         stack = extractDataTree(tree_data.decode())
         path_check = []
-
         while stack:
             entry_type, name, sha = stack.pop()
             try:
@@ -75,15 +71,12 @@ def compare(commit_sha, show_diff_var, comparePrint, noPrint=False):
             except Exception:
                 print(f"Warning: Could not read object {sha}")
                 continue
-
             if isinstance(object_data, str):
                 object_data = object_data.encode()
-
             if entry_type == "16384":
                 if name:
                     dir_path = os.path.join(parent_path, name)
                     path_check.append((dir_path, sha))
-
                 try:
                     children = extractDataTree(object_data.decode())
                 except Exception:
@@ -98,8 +91,8 @@ def compare(commit_sha, show_diff_var, comparePrint, noPrint=False):
             else:
                 path = os.path.join(parent_path, name)
                 path_check.append((path, sha))
-            
-        check(path_check, show_diff_var, noPrint)
+
+        check(path_check, show_diff_var, noPrint, parent_path, ignore_dirs, ignore_files, assvc_path)
         return changesMade
     except Exception:
         print("Error: An unexpected error occurred during comparison.")
@@ -111,8 +104,9 @@ YELLOW = "\033[93m"
 BLUE   = "\033[94m"
 RESET  = "\033[0m"
 
-def check(path_check, show_diff_var, noPrint):
+def check(path_check, show_diff_var, noPrint, parent_path, ignore_dirs, ignore_files, assvc_path):
     global comparePrintGlobal
+    global changesMade
     try:
         
         if not noPrint:

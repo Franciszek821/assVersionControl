@@ -31,7 +31,7 @@ After installing globally you can use command "assvc -h".
 
 * `assvc commit -m "message"` — Create a new commit with a message (default: "Commit without message")
 * `assvc commit` — Commit with default message
-* `assvc commit -a` — Stage all changes before commiting and commit
+
 
 ### Compare changes:
 
