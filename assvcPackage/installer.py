@@ -67,40 +67,8 @@ def install():
             sys.exit(1)
 
         print(f"Installed assvc to {TARGET_DIR}")
-        setup()
+        
     except Exception:
         print("Error: An unexpected error occurred during installation.")
         sys.exit(1)
 
-def setup():
-    try:
-        config_path = os.path.expanduser("~/.config/assvc/config")
-        try:
-            os.makedirs(config_path, exist_ok=True)
-        except PermissionError:
-            print("Error: Permission denied when creating config directory.")
-            return
-        except OSError:
-            print("Error: Could not create config directory.")
-            return
-
-        try:
-            username = input("Enter username name: ")
-        except KeyboardInterrupt:
-            print("\nSetup cancelled.")
-            return
-
-        if not username.strip():
-            print("Error: Username cannot be empty.")
-            return
-
-        try:
-            with open(config_path + "/username", "w") as f:
-                f.write(username)
-            print("Setup complete!")
-        except IOError:
-            print("Error: Could not save username configuration.")
-        except Exception:
-            print("Error: An unexpected error occurred during setup.")
-    except Exception:
-        print("Error: An unexpected error occurred during setup.")
