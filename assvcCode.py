@@ -14,7 +14,7 @@ from assvcPackage.utils import latest_release
 from packaging import version
 
 
-code_version = "1.1.0"
+code_version = "1.2.0"
 
 # CLI setup
 parser = argparse.ArgumentParser(prog="assvc"
@@ -144,7 +144,7 @@ except Exception:
 
 #TODO:
 '''
-
+- compare sha to sha
 
 ADVANCED:
 - Add gui application
