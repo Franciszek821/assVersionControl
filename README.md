@@ -1,10 +1,14 @@
 # Assvc
 Version control made by me.
 
-## Instaling Linux
-Use command "chmod +x ./assvcLinux" to give permision to file.
-To install globally to work everywhere use command "./assvcLinux install".
+## Installing Linux
+Use command "chmod +x ./assvcLinux" to give permission to file.
+To install globally to work everywhere use command "./assvcLinux installer".
 After installing globally you can use command "assvc -h".
+
+## Installing Windows
+Run "assvcWindows.exe installer" to install.
+After installation, add the installation directory to your PATH environment variable to use "assvc" globally.
 
 ## Requirements
 - Python 3.10+
@@ -19,7 +23,7 @@ After installing globally you can use command "assvc -h".
 
 ### Install tool:
 
-* `assvc installer` — Install or uninstall `assvc` to/from `~/.local/bin`
+* `assvc installer` — Install or uninstall `assvc` (Linux: to/from `~/.local/bin`, Windows: to/from `%LOCALAPPDATA%\assvc`)
 
 
 ### Repository operations

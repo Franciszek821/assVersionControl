@@ -24,13 +24,12 @@ def start():
         os.makedirs('.assvc/head', exist_ok=True)
         print("Created .assvc/head directory")
         
-        # Create empty history file
         history_file = os.path.join('.assvc', 'history', 'history')
         with open(history_file, 'w') as f:
             pass
         print("Created history file")
         
-        print("\n✓ Repository initialized successfully!")
+        print("\nRepository initialized successfully!")
         print("Use 'assvc staging stage -a' to stage files")
         print("Use 'assvc commit -m \"message\"' to create your first commit")
         

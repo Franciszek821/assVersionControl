@@ -212,5 +212,3 @@ def latest_release(owner, repo):
         "name": data["name"],
         "published_at": data["published_at"]
     }
-
-#print(latest_release("Franciszek821", "assVersionControl"))

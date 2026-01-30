@@ -1,7 +1,3 @@
-#show staged
-#show unstaged
-#show untracked
-
 from assvcPackage.stage import seeStaged
 from assvcPackage.compare import compare
 from assvcPackage.utils import find_assvc, get_ignore

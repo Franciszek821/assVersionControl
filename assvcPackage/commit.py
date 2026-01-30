@@ -163,7 +163,6 @@ def make_blob(file_path, assvc_path):
 
         st = os.stat(file_path)
         mode = st.st_mode & 0o777
-        #print(f"Created blob for {file_path} with SHA: {sha}")
         return sha, mode
 
     except Exception:

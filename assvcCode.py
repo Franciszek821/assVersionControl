@@ -141,18 +141,3 @@ except Exception:
     print("Error: An unexpected error occurred.")
     sys.exit(1)
 
-
-#TODO:
-'''
-- compare sha to sha
-
-ADVANCED:
-- Add gui application
-
-'''
-
-
-#pyinstaller --onefile --name assvcLinux assvcCode.py
-
-#pyinstaller --onefile --name assvcWindows assvcCode.py
-

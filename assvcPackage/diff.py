@@ -112,7 +112,6 @@ def diff(commit_sha, file_path):
     except Exception:
         print("Error: An unexpected error occurred during comparison.")
 
-# colors
 RED    = "\033[91m"
 GREEN  = "\033[92m"
 YELLOW = "\033[93m"

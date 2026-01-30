@@ -97,7 +97,6 @@ def compare(commit_sha, show_diff_var, comparePrint, noPrint=False):
     except Exception:
         print("Error: An unexpected error occurred during comparison.")
 
-# colors
 RED    = "\033[91m"
 GREEN  = "\033[92m"
 YELLOW = "\033[93m"
@@ -184,8 +183,3 @@ def check(path_check, show_diff_var, noPrint, parent_path, ignore_dirs, ignore_f
         
     except Exception:
         print("Error: An error occurred during comparison check.")
-
-
-
-
-# test
