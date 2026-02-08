@@ -13,7 +13,7 @@ from assvcPackage.stage import clear, stage
 
 
 
-def commit(message, stage_all=False):
+def commit(message="No message", stage_all=False):
     try:
         assvc_path = find_assvc()
         if assvc_path is None:

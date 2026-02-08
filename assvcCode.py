@@ -9,7 +9,7 @@ from assvcPackage.reverse import reverse
 from assvcPackage.clone import comImport, comExport
 from assvcPackage.diff import diff
 from assvcPackage.stage import stage,  unstage, clear, seeStaged
-from assvcPackage.status import status
+
 from assvcPackage.utils import latest_release
 from packaging import version
 
@@ -71,7 +71,7 @@ staging_sub.add_parser("clear", help="Clear all staged files")
 
 staging_sub.add_parser("show", help="See all staged files")
 
-status_parser = sub.add_parser("status", help="Show the status of staged and unstaged files")
+
 
 sub.add_parser("help", help="Show help for staging commands")
 tag = latest_release("Franciszek821", "assVersionControl")["tag"]
@@ -122,8 +122,6 @@ try:
             staging_group.print_help()
         else:
             staging_group.print_help()
-    elif args.command == "status":
-        status()
     else:
         parser.print_help()
 except KeyboardInterrupt:

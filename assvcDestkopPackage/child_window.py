@@ -11,6 +11,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout, QHBoxLayout, QApplication, QFrame, QPushButton, QStyle, QListWidget, QListWidgetItem, QSplitter, QTextEdit
 )
 
+from PySide6.QtGui import QKeySequence, QShortcut
 from PySide6.QtCore import QSize
 from assvcDestkopPackage import menu, file_widget
 from assvcDestkopPackage.loading import run_with_loading
@@ -210,6 +211,9 @@ class ChildWindow(QMainWindow):
 
         refresh_button.setStyleSheet(self.button_style_refresh)
         refresh_button.clicked.connect(self.on_refresh_clicked)
+
+        refresh_shortcut = QShortcut(QKeySequence("Ctrl+R"), self)
+        refresh_shortcut.activated.connect(self.on_refresh_clicked)
         
         changednumber_layout.addWidget(self.changed_files_label)
         changednumber_layout.addWidget(refresh_button)

@@ -100,7 +100,8 @@ def seeStaged(isPrint=True):
 
     index_path = os.path.join(assvc_path, "index")
     if not os.path.exists(index_path):
-        print("No files are currently staged.")
+        if isPrint:
+            print("No files are currently staged.")
         return
 
     with open(index_path, "r") as f:
