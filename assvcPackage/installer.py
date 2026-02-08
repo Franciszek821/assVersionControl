@@ -5,6 +5,8 @@ import shutil
 import stat
 import sys
 import platform
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from warning import show_warning
 
 def get_install_paths():
     system = platform.system()
@@ -14,7 +16,7 @@ def get_install_paths():
         target_dir = os.path.join(os.environ.get("LOCALAPPDATA", ""), "assvc")
         target_path = os.path.join(target_dir, "assvc.exe")
     else:
-        src_name = "assvcLinux"
+        src_name = "assvc"
         target_dir = os.path.expanduser("~/.local/bin")
         target_path = os.path.join(target_dir, "assvc")
     
@@ -34,10 +36,10 @@ def install():
                 os.remove(TARGET_PATH)
                 print("assvc removed")
             except PermissionError:
-                print("Error: Permission denied when removing existing installation.")
+                show_warning(None, "Permission Error", "Permission denied when removing existing installation.")
                 return
             except OSError:
-                print("Error: Could not remove existing installation.")
+                show_warning(None, "Remove Error", "Could not remove existing installation.")
                 return
             return
 
@@ -48,16 +50,16 @@ def install():
             return
 
         if not os.path.isfile(SRC_NAME):
-            print(f"Error: '{SRC_NAME}' not found in current directory")
+            show_warning(None, "File Error", f"'{SRC_NAME}' not found in current directory")
             sys.exit(1)
 
         try:
             os.makedirs(TARGET_DIR, exist_ok=True)
         except PermissionError:
-            print("Error: Permission denied. Could not create target directory.")
+            show_warning(None, "Permission Error", "Permission denied. Could not create target directory.")
             sys.exit(1)
         except OSError:
-            print("Error: Could not create target directory.")
+            show_warning(None, "Directory Error", "Could not create target directory.")
             sys.exit(1)
 
         if platform.system() != "Windows":
@@ -68,16 +70,16 @@ def install():
                     st.st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH
                 )
             except OSError:
-                print("Error: Could not set executable permissions.")
+                show_warning(None, "Permission Error", "Could not set executable permissions.")
                 sys.exit(1)
 
         try:
             shutil.move(SRC_NAME, TARGET_PATH)
         except PermissionError:
-            print("Error: Permission denied. Could not move assvc to target location.")
+            show_warning(None, "Permission Error", "Permission denied. Could not move assvc to target location.")
             sys.exit(1)
         except shutil.Error:
-            print("Error: Could not move assvc to target location.")
+            show_warning(None, "Move Error", "Could not move assvc to target location.")
             sys.exit(1)
 
         print(f"Installed assvc to {TARGET_DIR}")
@@ -86,6 +88,6 @@ def install():
             print(f"Add {TARGET_DIR} to your PATH environment variable to use assvc globally.")
         
     except Exception:
-        print("Error: An unexpected error occurred during installation.")
+        show_warning(None, "Installation Error", "An unexpected error occurred during installation.")
         sys.exit(1)
 

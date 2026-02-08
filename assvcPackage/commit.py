@@ -3,6 +3,9 @@ import os
 import hashlib
 import zlib
 import time
+import sys
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from warning import show_warning
 from assvcPackage.utils import (find_assvc, get_ignore, get_history,
                                  shorten_sha, read_index, is_dir_empty, extractCommitText)
 from assvcPackage.stage import clear, stage
@@ -14,7 +17,7 @@ def commit(message, stage_all=False):
     try:
         assvc_path = find_assvc()
         if assvc_path is None:
-            print("Error: not an assvc repository (run `assvc start` first)")
+            show_warning(None, "Repository Error", "not an assvc repository (run `assvc start` first)")
             return
 
         parent_path = os.path.dirname(assvc_path)
@@ -68,9 +71,10 @@ def commit(message, stage_all=False):
                             abs_path = os.path.join(parent_path, name)
                             previous_commit_files[os.path.abspath(abs_path)] = (sha, entry_type)
             except Exception as e:
-                
+                # Failed to retrieve previous commit data; start fresh
                 pass
         
+        total_files_processed = 0
         for root, dirs, files in os.walk(parent_path):
             dirs[:] = [d for d in dirs if d not in ignore_dirs]
         
@@ -91,11 +95,14 @@ def commit(message, stage_all=False):
                     if not os.path.isfile(file_path):
                         continue
                     try:
+                        total_files_processed += 1
+                        if total_files_processed % 100 == 0:
+                            print(f"Processing files... {total_files_processed} done", end='\r')
                         shaName, mode = make_blob(file_path, assvc_path)
                         blob_entry = f"{mode} {file} {shaName}"
                         blob_list.append(blob_entry)
                     except Exception as e:
-                        print(f"Warning: Skipping file {file_path} - unable to process")
+                        show_warning(None, "Process Warning", f"Skipping file {file_path} - unable to process", exception=e)
                         continue
 
                 elif abs_path in previous_commit_files and os.path.exists(abs_path):
@@ -116,7 +123,7 @@ def commit(message, stage_all=False):
                     try:
                         if os.path.abspath(dir_path) not in commitSet:
                             make_tree_empty_dir(os.path.relpath(dir_path, parent_path), assvc_path, tree_sha)
-                    except Exception:
+                    except Exception as e:
                         pass
         
             dir_by_parent[rel_root] = dir_list
@@ -127,19 +134,21 @@ def commit(message, stage_all=False):
                 "directory": dir_by_parent.get(parent, [])
             }
 
+        print(f"\nProcessed {total_files_processed} files. Building tree structure...")
         for parent in sorted(item_by_parent.keys(),
                              key=lambda p: 0 if p == "" else len(p.split(os.sep)),
                              reverse=True):
             blobs = item_by_parent[parent]["blobs"]
             directory = item_by_parent[parent]["directory"]
             tree_root_sha = make_tree(parent, blobs, directory, assvc_path, tree_sha)
-            
+        
+        print("Creating commit...")
         make_commit(tree_root_sha, assvc_path, message)
         clear()
-    except PermissionError:
-        print("Error: Permission denied. Unable to access files for commit.")
+    except PermissionError as e:
+        show_warning(None, "Permission Error", "Permission denied. Unable to access files for commit.", exception=e)
     except Exception as e:
-        print("Error: An unexpected error occurred during commit.")
+        show_warning(None, "Commit Error", "An unexpected error occurred during commit.", exception=e)
 
 def make_blob(file_path, assvc_path):
     try:
@@ -165,8 +174,8 @@ def make_blob(file_path, assvc_path):
         mode = st.st_mode & 0o777
         return sha, mode
 
-    except Exception:
-        raise Exception(f"Cannot read file: {file_path}")
+    except Exception as e:
+        raise Exception(f"Cannot read file: {file_path}") from e
 
 
 def make_tree(parent, blob, directory, assvc_path, tree_sha):
@@ -196,8 +205,8 @@ def make_tree(parent, blob, directory, assvc_path, tree_sha):
             return sha
             
         tree_sha.setdefault(parent, []).append(sha)
-    except Exception:
-        raise Exception("Error creating tree object")
+    except Exception as e:
+        raise Exception("Error creating tree object") from e
 
 def make_tree_empty_dir(dir, assvc_path, tree_sha):
     try:
@@ -216,8 +225,8 @@ def make_tree_empty_dir(dir, assvc_path, tree_sha):
 
         tree_sha.setdefault(dir, []).append(sha)
         return sha
-    except Exception:
-        raise Exception("Error creating empty directory tree")
+    except Exception as e:
+        raise Exception("Error creating empty directory tree") from e
 
 def make_commit(tree_root_sha, assvc_path, message):
     try:
@@ -240,18 +249,18 @@ def make_commit(tree_root_sha, assvc_path, message):
             f.write(sha)
         save_history(assvc_path, sha)
         return sha
-    except PermissionError:
-        print("Error: Permission denied while creating commit.")
-    except Exception:
-        print("Error: Failed to create commit.")
+    except PermissionError as e:
+        show_warning(None, "Permission Error", "Permission denied while creating commit.", exception=e)
+    except Exception as e:
+        show_warning(None, "Commit Error", "Failed to create commit.", exception=e)
 
 
 def save_history(assvc_path, sha):
     try:
         with open(get_history(assvc_path), "a") as f:
             f.write(sha + '\n')
-    except IOError:
-        print("Warning: Could not save history")
+    except IOError as e:
+        show_warning(None, "History Warning", "Could not save history", exception=e)
 
 
 

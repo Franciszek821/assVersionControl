@@ -3,6 +3,9 @@ import hashlib
 import zlib
 import time
 import difflib
+import sys
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from warning import show_warning
 
 from assvcPackage.utils import (find_assvc, get_ignore, deShorten_sha, get_history, extractDataCommit, extractDataTree, extractData,
                                  show_diff, is_text_bytes, extractCommitText)
@@ -14,10 +17,11 @@ def compare(commit_sha, show_diff_var, comparePrint, noPrint=False):
     global comparePrintGlobal
     global changesMade
     
+    changesMade = []  # Clear the list on each call
+    
     assvc_path = find_assvc()
     if not assvc_path:
-        print("Error: .assvc directory not found.")
-        return
+            show_warning(None, "Repository Error", ".assvc directory not found.")
     
     parent_path = os.path.dirname(assvc_path)
     ignore_dirs, ignore_files = get_ignore(parent_path)
@@ -28,7 +32,7 @@ def compare(commit_sha, show_diff_var, comparePrint, noPrint=False):
             try:
                 with open(current_path, "r") as f:
                     commit_sha = f.read().strip()
-            except IOError:
+            except IOError as e:
                 if not noPrint:
                     print("Info: No commits yet. All files will be considered new.")
                 all_files = []
@@ -36,8 +40,8 @@ def compare(commit_sha, show_diff_var, comparePrint, noPrint=False):
                     dirs[:] = [d for d in dirs if d not in ignore_dirs]
                     for f in files:
                         if f not in ignore_files:
-                            all_files.append(os.path.join(root, f))
-                return all_files
+                            all_files.append((os.path.join(root, f), "NEW"))
+                return all_files, len(all_files)
 
         commit_text = extractCommitText(commit_sha)
         if commit_text is None:
@@ -59,17 +63,24 @@ def compare(commit_sha, show_diff_var, comparePrint, noPrint=False):
         try:
             with open(root_tree_path, "rb") as f:
                 tree_data = zlib.decompress(f.read())
-        except Exception:
-            print("Error: Could not read tree data.")
+        except Exception as e:
+            show_warning(None, "Tree Error", "Could not read tree data.", exception=e)
             return
         stack = extractDataTree(tree_data.decode())
         path_check = []
         while stack:
             entry_type, name, sha = stack.pop()
+            
+            # Skip entries with empty SHA
+            if not sha or not sha.strip():
+                if not noPrint:
+                    print(f"Warning: Skipping entry with empty SHA: {name}")
+                continue
+            
             try:
                 object_data = extractData(sha)
-            except Exception:
-                print(f"Warning: Could not read object {sha}")
+            except Exception as e:
+                show_warning(None, "Object Warning", f"Could not read object {sha, name, entry_type}. Skipping.", exception=e)
                 continue
             if isinstance(object_data, str):
                 object_data = object_data.encode()
@@ -93,9 +104,9 @@ def compare(commit_sha, show_diff_var, comparePrint, noPrint=False):
                 path_check.append((path, sha))
 
         check(path_check, show_diff_var, noPrint, parent_path, ignore_dirs, ignore_files, assvc_path)
-        return changesMade
-    except Exception:
-        print("Error: An unexpected error occurred during comparison.")
+        return changesMade, len(changesMade)
+    except Exception as e:
+        show_warning(None, "Comparison Error", "An unexpected error occurred during comparison.", exception=e)
 
 RED    = "\033[91m"
 GREEN  = "\033[92m"
@@ -146,7 +157,7 @@ def check(path_check, show_diff_var, noPrint, parent_path, ignore_dirs, ignore_f
                     if comparePrintGlobal:
                         if not noPrint:
                             print(f"{YELLOW}  MODIFIED:{RESET} {path}")
-                        changesMade.append(path)
+                        changesMade.append((path, "MODIFIED"))
                     else:
                         print(f"{YELLOW}  MODIFY:{RESET} {path}")
         
@@ -158,15 +169,15 @@ def check(path_check, show_diff_var, noPrint, parent_path, ignore_dirs, ignore_f
                         else:
                             if not noPrint:
                                 print(f"{YELLOW}  MODIFIED (binary, no diff):{RESET} {path}")
-            except Exception:
-                print(f"Warning: Could not process file {path}")
+            except Exception as e:
+                show_warning(None, "Process Warning", f"Could not process file {path}", exception=e)
         tracked_paths = [path for path, sha in path_check]
         for item in dirsFilesAll:
             if item not in tracked_paths:
                 if comparePrintGlobal:
                     if not noPrint:
                         print(f"{GREEN}  NEW:{RESET} {item}")
-                    changesMade.append(item)
+                    changesMade.append((item, "NEW"))
                 else:
                     print(f"{RED}  DELETE:{RESET} {item}")
 
@@ -177,9 +188,9 @@ def check(path_check, show_diff_var, noPrint, parent_path, ignore_dirs, ignore_f
                 if comparePrintGlobal:
                     if not noPrint:
                         print(f"{RED}  DELETED:{RESET} {path}")
-                    changesMade.append(path)
+                    changesMade.append((path, "DELETED"))
                 else:
                     print(f"{GREEN}  ADD:{RESET} {path}")
         
-    except Exception:
-        print("Error: An error occurred during comparison check.")
+    except Exception as e:
+        show_warning(None, "Check Error", "An error occurred during comparison check.", exception=e)

@@ -13,21 +13,19 @@ from assvcPackage.status import status
 from assvcPackage.utils import latest_release
 from packaging import version
 
+from warning import show_warning
 
-code_version = "1.2.0"
 
-# CLI setup
+code_version = "2.0.0"
+
 parser = argparse.ArgumentParser(prog="assvc"
                                  , description="assVersionControl - A simple version control system")
 sub = parser.add_subparsers(dest="command")
 
-#start
 sub.add_parser("start",help="Initialize a new .assvc folder in the current directory")
 
-#installer
 sub.add_parser("installer", help="Install or uninstall assvc to/from ~/.local/bin")
 
-#repository group (import/export)
 repo_parser = sub.add_parser("repository", help="Repository operations (import/export)")
 repo_sub = repo_parser.add_subparsers(dest="repo_command")
 
@@ -35,13 +33,11 @@ import_parser = repo_sub.add_parser("import", help="Import repository data, late
 import_parser.add_argument("zip_path", type=str, help="Path to the zip file to import")
 repo_sub.add_parser("export", help="Export repository data")
 
-#commit
 commit_parser = sub.add_parser("commit", help="Create a new commit with a message")
 commit_parser.add_argument("-m", "--message", type=str, default="Commit without message",
                            help="Commit message")
 
 
-#compare group (compare/diff)
 compare_group = sub.add_parser("compare", help="Compare and diff operations")
 compare_sub = compare_group.add_subparsers(dest="compare_command")
 
@@ -53,16 +49,14 @@ diff_parser = compare_sub.add_parser("diff", help="Show differences between work
 diff_parser.add_argument("-s", "--sha", type=str, default="latest", help="SHA of the commit to compare to")
 diff_parser.add_argument("file_path", type=str, help="Path to the file to show differences for")
 
-#history
 history_parser = sub.add_parser("history", help="Show commit history")
 history_parser.add_argument("-l", "--long", action="store_true",help="Show longer sha output")
 
-#reverse
 reverse_parser = sub.add_parser("reverse", help="Revert to a previous commit (default: latest commit)")
 reverse_parser.add_argument("-s", "--sha", type=str, default="latest", help="SHA of the commit to revert to")
 reverse_parser.add_argument("-f", "--force", action="store_true", help="Force reverse without confirmation")
+reverse_parser.add_argument("file_path", nargs="?", type=str, help="Optional: Path to a single file to reverse")
 
-#staging group
 staging_group = sub.add_parser("staging", help="Staging operations")
 staging_sub = staging_group.add_subparsers(dest="staging_command")
 
@@ -77,10 +71,8 @@ staging_sub.add_parser("clear", help="Clear all staged files")
 
 staging_sub.add_parser("show", help="See all staged files")
 
-#status
 status_parser = sub.add_parser("status", help="Show the status of staged and unstaged files")
 
-#Help
 sub.add_parser("help", help="Show help for staging commands")
 tag = latest_release("Franciszek821", "assVersionControl")["tag"]
 if version.parse(tag) > version.parse(code_version):
@@ -104,7 +96,7 @@ try:
     elif args.command == "history":
         printHistory(long=args.long)
     elif args.command == "reverse":
-        reverse(commit_sha=args.sha, isPrintArgument=True, isForce=args.force)
+        reverse(commit_sha=args.sha, isPrintArgument=True, isForce=args.force, file_path=args.file_path if hasattr(args, 'file_path') else None)
     elif args.command == "repository":
         if args.repo_command == "import":
             comImport(args.zip_path)
@@ -137,7 +129,7 @@ try:
 except KeyboardInterrupt:
     print("\n\nOperation cancelled by user.")
     sys.exit(0)
-except Exception:
-    print("Error: An unexpected error occurred.")
+except Exception as e:
+    show_warning(None, "Comparison Error", "An unexpected error occurred during comparison.", exception=e)
     sys.exit(1)
 

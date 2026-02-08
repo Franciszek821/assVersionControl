@@ -1,19 +1,13 @@
 # Assvc
 Version control made by me.
 
-## Installing Linux
-Use command "chmod +x ./assvcLinux" to give permission to file.
-To install globally to work everywhere use command "./assvcLinux installer".
-After installing globally you can use command "assvc -h".
-
-## Installing Windows
-Run "assvcWindows.exe installer" to install.
-After installation, add the installation directory to your PATH environment variable to use "assvc" globally.
+## Instaling Linux
+Use command "chmod +x ./assvc" to give permision to file.
+To install globally to work everywhere use command "./assvc install".After installing globally you can use command "assvc -h".
 
 ## Requirements
 - Python 3.10+
-- All of the needed dependencies are in the file called requirements.txt 
-
+- No external dependencies
 
 ## Commands
 
@@ -22,8 +16,7 @@ After installation, add the installation directory to your PATH environment vari
 * `assvc start` — Initialize a new `.assvc` folder in the current directory
 
 ### Install tool:
-
-* `assvc installer` — Install or uninstall `assvc` (Linux: to/from `~/.local/bin`, Windows: to/from `%LOCALAPPDATA%\assvc`)
+* `assvc installer` — Install or uninstall `assvc` to/from `~/.local/bin`
 
 
 ### Repository operations
@@ -55,6 +48,8 @@ After installation, add the installation directory to your PATH environment vari
 * `assvc reverse` — Revert the working directory to latest commit
 * `assvc reverse -s <sha>` — Revert the working directory to selected commit
 * `assvc reverse -f` — Revert without confirmation
+* `assvc reverse -s <sha> <file_path>` — Revert a single file to selected commit
+* `assvc reverse <file_path>` — Revert a single file to latest commit
 
 
 ### Staging

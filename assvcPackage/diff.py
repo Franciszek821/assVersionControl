@@ -3,17 +3,23 @@ import hashlib
 import zlib
 import time
 import difflib
+import sys
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from warning import show_warning
 
 from assvcPackage.utils import (find_assvc, get_ignore, deShorten_sha, get_history, extractDataCommit,
                                  extractDataTree, extractData, show_diff, is_text_bytes, is_text_file)
 
-assvc_path = find_assvc()
-if assvc_path:
+
+def diff(commit_sha, file_path, noPrint=False):
+    assvc_path = find_assvc()
+    if not assvc_path:
+        show_warning(None, "Repository Error", ".assvc directory not found.")
+        return None
+    
     parent_path = os.path.dirname(assvc_path)
     ignore_dirs, ignore_files = get_ignore(parent_path)
-
-
-def diff(commit_sha, file_path):
+    
     file_path = os.path.abspath(file_path)
     try:
         if commit_sha == "latest":
@@ -22,36 +28,33 @@ def diff(commit_sha, file_path):
                 with open(current_path, "r") as f:
                     commit_sha = f.read().strip()
             except IOError:
-                print("Error: Could not read current commit reference")
-                return
+                show_warning(None, "Read Error", "Could not read current commit reference")
+                return None
         
         commit_sha = deShorten_sha(commit_sha, get_history(assvc_path))
-
-        if not assvc_path:
-            print("Error: .assvc directory not found.")
-            return
         
         commit_path = os.path.join(assvc_path, "objects", commit_sha[:2], commit_sha)
         try:
             with open(commit_path, "rb") as f:
                 compressed_data = f.read()
         except FileNotFoundError:
-            print(f"Error: Commit '{commit_sha}' not found.")
-            return
+            show_warning(None, "Commit Error", f"Commit '{commit_sha}' not found.")
+            return None
         except IOError:
-            print("Error: Unable to read commit data.")
-            return
+            show_warning(None, "Read Error", "Unable to read commit data.")
+            return None
 
         try:
             decompressed = zlib.decompress(compressed_data)
             commit_text = decompressed.decode("utf-8", errors="replace")
         except Exception:
-            print("Error: Corrupted commit data.")
-            return
+            show_warning(None, "Data Error", "Corrupted commit data.")
+            return None
 
         treeSHA, commiter, timestamp, message = extractDataCommit(commit_text)
-        print(f"Comparing with commit: {commiter} {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(int(timestamp)))}")
-        print(f"Message: {message}")
+        if not noPrint:
+            print(f"Comparing with commit: {commiter} {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(int(timestamp)))}")
+            print(f"Message: {message}")
 
 
         root_tree_path = os.path.join(assvc_path, "objects", treeSHA[:2], treeSHA)
@@ -59,8 +62,8 @@ def diff(commit_sha, file_path):
             with open(root_tree_path, "rb") as f:
                 tree_data = zlib.decompress(f.read())
         except Exception:
-            print("Error: Could not read tree data.")
-            return
+            show_warning(None, "Tree Error", "Could not read tree data.")
+            return None
 
         stack = extractDataTree(tree_data.decode())
         path_check = []
@@ -70,7 +73,7 @@ def diff(commit_sha, file_path):
             try:
                 object_data = extractData(sha)
             except Exception:
-                print(f"Warning: Could not read object {sha}")
+                show_warning(None, "Object Warning", f"Could not read object {sha}")
                 continue
 
             if isinstance(object_data, str):
@@ -96,21 +99,22 @@ def diff(commit_sha, file_path):
                 path = os.path.join(parent_path, name)
                 path_check.append((path, sha))
         if not os.path.exists(file_path):
-            print(f"Error: File '{file_path}' does not exist in the working directory.")
-            return
+            show_warning(None, "File Error", f"File '{file_path}' does not exist in the working directory.")
+            return None
         for (path, sha) in path_check:
             if path != os.path.abspath(file_path):
                 continue
             else:
-                print(f"\nDifferences for file: {path}\n")
-                check([(path, sha)])
-                return
-        print(f"Error: File '{file_path}' not found in the specified commit.")
-        return
+                if not noPrint:
+                    print(f"\nDifferences for file: {path}\n")
+                return check([(path, sha)], noPrint, assvc_path, parent_path, ignore_dirs, ignore_files)
+        show_warning(None, "File Error", f"File '{file_path}' not found in the specified commit.")
+        return None
 
 
     except Exception:
-        print("Error: An unexpected error occurred during comparison.")
+        show_warning(None, "Comparison Error", "An unexpected error occurred during comparison.")
+        return None
 
 RED    = "\033[91m"
 GREEN  = "\033[92m"
@@ -118,10 +122,18 @@ YELLOW = "\033[93m"
 BLUE   = "\033[94m"
 RESET  = "\033[0m"
 
-def check(path_check):
-
+def check(path_check, noPrint=False, assvc_path=None, parent_path=None, ignore_dirs=None, ignore_files=None):
+    if not assvc_path:
+        assvc_path = find_assvc()
+    if not parent_path:
+        parent_path = os.path.dirname(assvc_path)
+    if ignore_dirs is None or ignore_files is None:
+        ignore_dirs, ignore_files = get_ignore(parent_path)
+    
+    diff_result = []
     try:
-        print()
+        if not noPrint:
+            print()
 
         dirsFilesAll = []
         for root, dirs, files in os.walk(parent_path):
@@ -158,24 +170,55 @@ def check(path_check):
                 now_blob = fileContent
 
                 if shaNow != sha:
-                    print(f"{YELLOW}  MODIFIED:{RESET} {path}")
+                    if not noPrint:
+                        print(f"{YELLOW}  MODIFIED:{RESET} {path}")
 
                     
                     if is_text_bytes(old_content_bytes) and is_text_bytes(now_blob):
                         old_text = old_content_bytes.decode("utf-8", errors="replace")
                         new_text = now_blob.decode("utf-8", errors="replace")
-                        show_diff(old_text, new_text, path)
+                        
+                        # Generate diff lines
+                        import difflib
+                        old_lines = old_text.splitlines(keepends=True)
+                        new_lines = new_text.splitlines(keepends=True)
+                        diff_lines = list(difflib.unified_diff(
+                            old_lines,
+                            new_lines,
+                            fromfile=path + " (previous)",
+                            tofile=path + " (current)",
+                            lineterm=""
+                        ))
+                        
+                        # Print if needed
+                        if not noPrint:
+                            show_diff(old_text, new_text, path)
+                        
+                        diff_result.append({
+                            'path': path,
+                            'status': 'MODIFIED',
+                            'old_content': old_text,
+                            'new_content': new_text,
+                            'diff': diff_lines
+                        })
                     else:
-                        print(f"{YELLOW}    MODIFIED (binary, no diff):{RESET} {path}")
+                        if not noPrint:
+                            print(f"{YELLOW}    MODIFIED (binary, no diff):{RESET} {path}")
+                        diff_result.append({
+                            'path': path,
+                            'status': 'MODIFIED',
+                            'binary': True
+                        })
 
             except IOError:
-                print(f"Warning: Could not read file {path}")
+                show_warning(None, "Read Warning", f"Could not read file {path}")
                 continue
             except Exception:
-                print(f"Warning: Could not process file {path}")
+                show_warning(None, "Process Warning", f"Could not process file {path}")
                 continue
 
-
+        return diff_result
 
     except Exception:
-        print("Error: An error occurred during comparison check.")
+        show_warning(None, "Check Error", "An error occurred during comparison check.")
+        return diff_result

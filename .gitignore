@@ -1,5 +1,10 @@
 /.assvc
 assvcPackage/__pycache__
 build
-assvcLinux.spec
+assvc.spec
+assvc-gui.spec
+assvc-gui.spec
 dist
+env
+assvcDestkopPackage/__pycache__
+__pycache__

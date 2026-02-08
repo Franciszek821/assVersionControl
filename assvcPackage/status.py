@@ -1,3 +1,7 @@
+import os
+import sys
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from warning import show_warning
 from assvcPackage.stage import seeStaged
 from assvcPackage.compare import compare
 from assvcPackage.utils import find_assvc, get_ignore
@@ -6,7 +10,7 @@ from assvcPackage.utils import find_assvc, get_ignore
 def status():
     assvc_path = find_assvc()
     if assvc_path is None:
-        print("Error: not an assvc repository (run `assvc start` first).")
+        show_warning(None, "Repository Error", "not an assvc repository (run `assvc start` first).")
         return
     listStaged = seeStaged(isPrint=False) or []
     listAll = compare("latest", False, False, True) or []
